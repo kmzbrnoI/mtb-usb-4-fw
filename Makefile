@@ -66,26 +66,24 @@ CPP_DEFS = \
 	-DSTM32F103xB
 
 
-CPP_INCLUDES = \
-	-I$(STM32_DRIVERS_PATH)/STM32F1xx_HAL_Driver/Inc \
-	-I$(STM32_DRIVERS_PATH)/STM32F1xx_HAL_Driver/Inc/Legacy \
-	-I$(STM32_DRIVERS_PATH)/CMSIS/Device/ST/STM32F1xx/Include \
-	-I$(STM32_DRIVERS_PATH)/CMSIS/Include \
-	-I inc
+CPP_INCLUDES =
 
-C_INCLUDES =  \
+C_INCLUDES =
+
+C_OR_CPP_INCLUDES = \
 	-I$(STM32_DRIVERS_PATH)/STM32F1xx_HAL_Driver/Inc \
 	-I$(STM32_DRIVERS_PATH)/STM32F1xx_HAL_Driver/Inc/Legacy \
 	-I$(STM32_DRIVERS_PATH)/CMSIS/Device/ST/STM32F1xx/Include \
 	-I$(STM32_DRIVERS_PATH)/CMSIS/Include \
+	-Ilib/libusb_stm32/inc \
 	-I inc
 
 AS_INCLUDES =
 
 
-ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -pedantic
-CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -pedantic
-CPPFLAGS = $(MCU) $(CPP_DEFS) $(CPP_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -pedantic
+ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(C_OR_CPP_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+CPPFLAGS = $(MCU) $(CPP_DEFS) $(CPP_INCLUDES) $(C_OR_CPP_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections -std=c++17
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
