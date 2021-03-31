@@ -8,6 +8,7 @@ const PinDef pinLedYellow = {GPIOB, GPIO_PIN_14};
 
 const PinDef usbDnPin = {GPIOA, GPIO_PIN_11};
 const PinDef usbDpPin = {GPIOA, GPIO_PIN_12};
+const PinDef usbDpPullUpPin = {USBD_DP_PORT, 1 << USBD_DP_PIN};
 
 void gpio_init(void) {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -35,6 +36,7 @@ void gpio_init(void) {
 
 	gpio_pin_init(usbDnPin, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
 	gpio_pin_init(usbDpPin, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+	gpio_pin_init(usbDpPullUpPin, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW);
 }
 
 void gpio_pins_init(GPIO_TypeDef* port, uint32_t pinMask, uint32_t mode, uint32_t pull, uint32_t speed) {

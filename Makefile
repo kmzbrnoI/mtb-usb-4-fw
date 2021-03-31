@@ -96,6 +96,14 @@ endif
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 CPPFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 
+CFLAGS += \
+	-DUSBD_DP_PORT=GPIOA \
+	-DUSBD_DP_PIN=10
+
+CPPFLAGS += \
+	-DUSBD_DP_PORT=GPIOA \
+	-DUSBD_DP_PIN=10
+
 
 LDSCRIPT = STM32F103C8Tx_FLASH.ld
 
