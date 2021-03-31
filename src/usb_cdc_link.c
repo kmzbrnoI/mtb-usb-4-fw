@@ -1,8 +1,8 @@
 /// Implements USB CDC using libusb_stm
 
-#include <array>
-#include <cstdint>
-#include <cstring>
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
 //#include "Bsp.hpp"
 //#include "CdcUartTunnel.hpp"
 //#include "Esp32Manager.hpp"
@@ -31,14 +31,12 @@ enum {
 	INTERFACE_COUNT_NODEBUG = INTERFACE_DEBUG_COMM,
 };
 
-extern "C" {
-extern const struct usb_string_descriptor lang_desc;
-extern const struct usb_string_descriptor manuf_desc_en;
-extern const struct usb_string_descriptor prod_desc_en;
-extern const struct usb_string_descriptor cdc_iface_desc_en;
-extern const struct usb_string_descriptor debug_iface_desc_en;
-extern struct usb_string_descriptor serial_number_desc_en;
-};
+const struct usb_string_descriptor lang_desc = USB_ARRAY_DESC(USB_LANGID_ENG_US);
+const struct usb_string_descriptor manuf_desc_en = USB_STRING_DESC("KMZ Brno I");
+const struct usb_string_descriptor prod_desc_en = USB_STRING_DESC("MTB-USB v4");
+const struct usb_string_descriptor cdc_iface_desc_en = USB_STRING_DESC("MTB-USB Serial Interface");
+const struct usb_string_descriptor debug_iface_desc_en = USB_STRING_DESC("MTB-USB v4 Debug UART");
+struct usb_string_descriptor serial_number_desc_en = USB_STRING_DESC("0001");
 
 static const struct usb_string_descriptor* const dtable[STRDESC_MAX] = {
 	&lang_desc,
@@ -61,11 +59,11 @@ static const struct usb_string_descriptor* const dtable[STRDESC_MAX] = {
 	struct usb_endpoint_descriptor debug_data_eprx; \
 	struct usb_endpoint_descriptor debug_data_eptx;
 
-struct __debug_descriptors {
+struct {
 	DEBUG_DESCRIPTORS
-} __attribute__((packed));
+} __attribute__((packed)) __debug_descriptors;
 
-static constexpr size_t DebugDescriptorsSize = sizeof(__debug_descriptors);
+static const size_t DebugDescriptorsSize = sizeof(__debug_descriptors);
 
 struct cdc_config {
 	struct usb_config_descriptor config;
@@ -343,27 +341,10 @@ static void tunnel_check_for_dfu_request(const struct usb_cdc_line_coding* codin
 static usbd_respond cdc_control_tunnel(usbd_device* dev, usbd_ctlreq* req) {
 	switch (req->bRequest) {
 	case USB_CDC_SET_CONTROL_LINE_STATE: {
-		const bool dtr = req->wValue & 0x01;
-		const bool rts = req->wValue & 0x02;
-		//DEBUG("CONTROL_LINE_STATE DTR %d RTS %d\n", (int)dtr, (int)rts);
-		// sEsp32Manager.onSerialBreakInIrq(dtr, rts);
 		return usbd_ack;
 	}
 	case USB_CDC_SET_LINE_CODING: {
-		if (req->wLength < sizeof(cdc_line_tunnel))
-			return usbd_fail;
-
-		auto* newCoding = (struct usb_cdc_line_coding*)req->data;
-
-		tunnel_check_for_dfu_request(newCoding);
-
-		//if (!tunnelOnSetLineCodingInIrq(cdc_line_tunnel, *newCoding))
-		//	  return usbd_fail;
-
 		memcpy(&cdc_line_tunnel, req->data, sizeof(cdc_line_tunnel));
-		/*DEBUG("USB_CDC_SET_LINE_CODING %d %d %d %d\n",
-			cdc_line_tunnel.dwDTERate, cdc_line_tunnel.bCharFormat,
-			cdc_line_tunnel.bDataBits, cdc_line_tunnel.bParityType);*/
 		return usbd_ack;
 	}
 	case USB_CDC_GET_LINE_CODING:
@@ -447,15 +428,15 @@ void cdcLinkInit() {
 	// pinInit(button3Pin, GPIO_MODE_OUTPUT_PP, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, true);
 	// pinWrite(button3Pin, 1);
 
-	std::array<uint32_t, 3> uid;
+	uint32_t uid[3];
 	uid[0] = HAL_GetUIDw0();
 	uid[1] = HAL_GetUIDw1();
 	uid[2] = HAL_GetUIDw2();
 
 	char buf[9];
 	size_t sn_off = 0;
-	for (auto u : uid) {
-		snprintf(buf, sizeof(buf), "%08lx", u);
+	for (size_t i = 0; i < 3; i++) {
+		snprintf(buf, sizeof(buf), "%08lx", uid[i]);
 		for (int i = 0; i < 8; ++i) {
 			serial_number_desc_en.wString[sn_off++] = buf[i];
 		}
@@ -491,4 +472,4 @@ void cdcLinkInit() {
 
 bool cdcLinkIsDebugEpEnabled() { return enableDebugEp; }
 
-extern "C" void USB_LP_IRQ_HANDLER(void) { usbd_poll(&udev); }
+void USB_LP_IRQ_HANDLER(void) { usbd_poll(&udev); }

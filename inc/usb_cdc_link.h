@@ -16,13 +16,5 @@
 
 extern usbd_device udev;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void cdcLinkInit();
 bool cdcLinkIsDebugEpEnabled();
-
-#ifdef __cplusplus
-}
-#endif

@@ -1,7 +1,5 @@
 #pragma once
 
-extern "C" {
-
 #include "stm32f1xx_hal.h"
 
 void Error_Handler(void);
@@ -14,5 +12,3 @@ void Error_Handler(void);
 #define RED_YEL_GPIO_Port GPIOB
 #define LED_GR_Pin GPIO_PIN_15
 #define LED_GR_GPIO_Port GPIOB
-
-}

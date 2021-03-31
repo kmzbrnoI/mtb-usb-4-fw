@@ -1,4 +1,5 @@
 #include "main.h"
+#include "usb_cdc_link.h"
 
 I2C_HandleTypeDef hi2c1;
 
@@ -29,6 +30,8 @@ int main(void) {
 	MX_USB_PCD_Init();
 	MX_USART3_UART_Init();
 	MX_I2C1_Init();
+
+	cdcLinkInit();
 
 	while (true) {
 	}
