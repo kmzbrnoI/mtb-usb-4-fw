@@ -6,6 +6,8 @@ const PinDef pinLedGreen = {GPIOB, GPIO_PIN_15};
 const PinDef pinLedBlue = {GPIOB, GPIO_PIN_12};
 const PinDef pinLedYellow = {GPIOB, GPIO_PIN_14};
 
+const PinDef usbDnPin = {GPIOA, GPIO_PIN_11};
+const PinDef usbDpPin = {GPIOA, GPIO_PIN_12};
 
 void gpio_init(void) {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -31,12 +33,8 @@ void gpio_init(void) {
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-	/*pinInit(usbDnPin, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-	pinInit(usbDpPin, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-	pinInit(
-		usbDpPullUpPin, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW);
-	pinInit(
-		usbBusDetectionPin, GPIO_MODE_INPUT, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW);*/
+	gpio_pin_init(usbDnPin, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+	gpio_pin_init(usbDpPin, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
 }
 
 void gpio_pins_init(GPIO_TypeDef* port, uint32_t pinMask, uint32_t mode, uint32_t pull, uint32_t speed) {
