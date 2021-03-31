@@ -8,10 +8,14 @@ typedef struct {
 	uint32_t pin;
 } PinDef;
 
-extern const PinDef pinLedRed;
-extern const PinDef pinLedGreen;
-extern const PinDef pinLedBlue;
-extern const PinDef pinLedYellow;
+extern const PinDef pin_led_red;
+extern const PinDef pin_led_green;
+extern const PinDef pin_led_blue;
+extern const PinDef pin_led_yellow;
+
+extern const PinDef pin_usb_dn;
+extern const PinDef pin_usb_dp;
+extern const PinDef pin_usb_dp_pullup;
 
 void gpio_init(void);
 

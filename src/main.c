@@ -19,7 +19,7 @@ int main(void) {
 	init();
 
 	while (true) {
-		gpio_pin_toggle(pinLedBlue);
+		gpio_pin_toggle(pin_led_blue);
 		HAL_Delay(500);
 	}
 }
@@ -31,10 +31,10 @@ void init(void) {
 
 	gpio_init();
 
-	gpio_pin_write(pinLedRed, true);
-	gpio_pin_write(pinLedYellow, true);
-	gpio_pin_write(pinLedGreen, true);
-	gpio_pin_write(pinLedBlue, true);
+	gpio_pin_write(pin_led_red, true);
+	gpio_pin_write(pin_led_yellow, true);
+	gpio_pin_write(pin_led_green, true);
+	gpio_pin_write(pin_led_blue, true);
 
 	if (!mtbbus_init())
 		error_handler();
@@ -45,10 +45,10 @@ void init(void) {
 
 	HAL_Delay(100);
 
-	gpio_pin_write(pinLedRed, false);
-	gpio_pin_write(pinLedYellow, false);
-	gpio_pin_write(pinLedGreen, false);
-	gpio_pin_write(pinLedBlue, false);
+	gpio_pin_write(pin_led_red, false);
+	gpio_pin_write(pin_led_yellow, false);
+	gpio_pin_write(pin_led_green, false);
+	gpio_pin_write(pin_led_blue, false);
 }
 
 bool clock_init(void) {

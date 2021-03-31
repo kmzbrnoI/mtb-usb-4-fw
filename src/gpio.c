@@ -1,14 +1,14 @@
 #include "gpio.h"
 #include "stm32f1xx_hal.h"
 
-const PinDef pinLedRed = {GPIOB, GPIO_PIN_13};
-const PinDef pinLedGreen = {GPIOB, GPIO_PIN_15};
-const PinDef pinLedBlue = {GPIOB, GPIO_PIN_12};
-const PinDef pinLedYellow = {GPIOB, GPIO_PIN_14};
+const PinDef pin_led_red = {GPIOB, GPIO_PIN_13};
+const PinDef pin_led_green = {GPIOB, GPIO_PIN_15};
+const PinDef pin_led_blue = {GPIOB, GPIO_PIN_12};
+const PinDef pin_led_tellow = {GPIOB, GPIO_PIN_14};
 
-const PinDef usbDnPin = {GPIOA, GPIO_PIN_11};
-const PinDef usbDpPin = {GPIOA, GPIO_PIN_12};
-const PinDef usbDpPullUpPin = {USBD_DP_PORT, 1 << USBD_DP_PIN};
+const PinDef pin_usb_dn = {GPIOA, GPIO_PIN_11};
+const PinDef pin_usb_dp = {GPIOA, GPIO_PIN_12};
+const PinDef pin_usb_dp_pullup = {USBD_DP_PORT, 1 << USBD_DP_PIN};
 
 void gpio_init(void) {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -18,10 +18,12 @@ void gpio_init(void) {
 	__HAL_RCC_GPIOD_CLK_ENABLE();
 
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2 | pinLedBlue.pin | pinLedRed.pin | pinLedYellow.pin | pinLedGreen.pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2 | pin_led_blue.pin | pin_led_red.pin |
+	                  pin_led_yellow.pin | pin_led_green.pin, GPIO_PIN_RESET);
 
 	/*Configure GPIO pins : PB2 LED_BLUE_Pin LED_RED_Pin RED_YEL_Pin LED_GR_Pin */
-	GPIO_InitStruct.Pin = GPIO_PIN_2 | pinLedBlue.pin | pinLedRed.pin | pinLedYellow.pin | pinLedGreen.pin;
+	GPIO_InitStruct.Pin = GPIO_PIN_2 | pin_led_blue.pin | pin_led_red.pin |
+	                      pin_led_yellow.pin | pin_led_green.pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -34,9 +36,9 @@ void gpio_init(void) {
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-	gpio_pin_init(usbDnPin, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-	gpio_pin_init(usbDpPin, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-	gpio_pin_init(usbDpPullUpPin, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW);
+	gpio_pin_init(pin_usb_dn, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+	gpio_pin_init(pin_usb_dp, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+	gpio_pin_init(pin_usb_dp_pullup, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW);
 }
 
 void gpio_pins_init(GPIO_TypeDef* port, uint32_t pinMask, uint32_t mode, uint32_t pull, uint32_t speed) {
