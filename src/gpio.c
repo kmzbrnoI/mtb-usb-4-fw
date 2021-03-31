@@ -4,11 +4,26 @@
 const PinDef pin_led_red = {GPIOB, GPIO_PIN_13};
 const PinDef pin_led_green = {GPIOB, GPIO_PIN_15};
 const PinDef pin_led_blue = {GPIOB, GPIO_PIN_12};
-const PinDef pin_led_tellow = {GPIOB, GPIO_PIN_14};
+const PinDef pin_led_yellow = {GPIOB, GPIO_PIN_14};
 
 const PinDef pin_usb_dn = {GPIOA, GPIO_PIN_11};
 const PinDef pin_usb_dp = {GPIOA, GPIO_PIN_12};
 const PinDef pin_usb_dp_pullup = {USBD_DP_PORT, 1 << USBD_DP_PIN};
+
+const PinDef pin_debug_a = {GPIOA, GPIO_PIN_8};
+const PinDef pin_debug_b = {GPIOA, GPIO_PIN_9};
+
+const PinDef pin_usart_mtb_rx = {GPIOB, GPIO_PIN_11};
+const PinDef pin_usart_mtb_tx = {GPIOB, GPIO_PIN_10};
+const PinDef pin_usart_mtb_dir = {GPIOB, GPIO_PIN_2};
+
+const PinDef pin_i2c_scl = {GPIOB, GPIO_PIN_8};
+const PinDef pin_i2c_sda = {GPIOB, GPIO_PIN_9};
+
+const PinDef pin_debug_cts = {GPIOA, GPIO_PIN_0};
+const PinDef pin_debug_tx = {GPIOA, GPIO_PIN_2};
+const PinDef pin_debug_rx = {GPIOA, GPIO_PIN_3};
+
 
 void gpio_init(void) {
 	GPIO_InitTypeDef GPIO_InitStruct = {0};

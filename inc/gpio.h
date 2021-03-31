@@ -17,6 +17,20 @@ extern const PinDef pin_usb_dn;
 extern const PinDef pin_usb_dp;
 extern const PinDef pin_usb_dp_pullup;
 
+extern const PinDef pin_debug_a;
+extern const PinDef pin_debug_b;
+
+extern const PinDef pin_usart_mtb_rx;
+extern const PinDef pin_usart_mtb_tx;
+extern const PinDef pin_usart_mtb_dir;
+
+extern const PinDef pin_i2c_scl;
+extern const PinDef pin_i2c_sda;
+
+extern const PinDef pin_debug_cts;
+extern const PinDef pin_debug_tx;
+extern const PinDef pin_debug_rx;
+
 void gpio_init(void);
 
 inline void gpio_pin_init(PinDef pin, uint32_t mode, uint32_t pull, uint32_t speed);
