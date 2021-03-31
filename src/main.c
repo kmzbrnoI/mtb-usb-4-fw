@@ -2,6 +2,7 @@
 #include "usb_cdc_link.h"
 #include "i2c.h"
 #include "mtbbus.h"
+#include "gpio.h"
 
 UART_HandleTypeDef h_uart_debug;
 
@@ -10,7 +11,6 @@ UART_HandleTypeDef h_uart_debug;
 static void error_handler();
 static void init(void);
 static bool clock_init(void);
-static void MX_GPIO_Init(void);
 static bool debug_uart_init(void);
 
 /* Private user code ---------------------------------------------------------*/
@@ -27,13 +27,26 @@ void init(void) {
 		error_handler();
 	HAL_Init();
 
-	MX_GPIO_Init();
+	gpio_init();
+
+	gpio_pin_write(pinLedRed, true);
+	gpio_pin_write(pinLedYellow, true);
+	gpio_pin_write(pinLedGreen, true);
+	gpio_pin_write(pinLedBlue, true);
+
 	if (!mtbbus_init())
 		error_handler();
 	if (!i2c_init())
 		error_handler();
 	cdcLinkInit();
 	debug_uart_init();
+
+	// HAL_Delay(1);
+
+	gpio_pin_write(pinLedRed, false);
+	gpio_pin_write(pinLedYellow, false);
+	gpio_pin_write(pinLedGreen, false);
+	gpio_pin_write(pinLedBlue, false);
 }
 
 bool clock_init(void) {
@@ -82,35 +95,6 @@ static bool debug_uart_init(void) {
 	h_uart_debug.Init.HwFlowCtl = UART_HWCONTROL_CTS;
 	h_uart_debug.Init.OverSampling = UART_OVERSAMPLING_16;
 	return (HAL_UART_Init(&h_uart_debug) != HAL_OK);
-}
-
-static void MX_GPIO_Init(void) {
-	GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-	/* GPIO Ports Clock Enable */
-	__HAL_RCC_GPIOD_CLK_ENABLE();
-	__HAL_RCC_GPIOA_CLK_ENABLE();
-	__HAL_RCC_GPIOB_CLK_ENABLE();
-
-	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2|LED_BLUE_Pin|LED_RED_Pin|RED_YEL_Pin|LED_GR_Pin, GPIO_PIN_RESET);
-
-	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
-
-	/*Configure GPIO pins : PB2 LED_BLUE_Pin LED_RED_Pin RED_YEL_Pin LED_GR_Pin */
-	GPIO_InitStruct.Pin = GPIO_PIN_2|LED_BLUE_Pin|LED_RED_Pin|RED_YEL_Pin|LED_GR_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-	/*Configure GPIO pins : PA8 PA9 */
-	GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
