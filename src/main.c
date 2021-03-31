@@ -1,43 +1,42 @@
 #include "main.h"
 #include "usb_cdc_link.h"
+#include "i2c.h"
+#include "mtbbus.h"
 
-I2C_HandleTypeDef hi2c1;
-
-UART_HandleTypeDef huart2;
-UART_HandleTypeDef huart3;
-
-PCD_HandleTypeDef hpcd_USB_FS;
+UART_HandleTypeDef h_uart_debug;
 
 /* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
+
+static void error_handler();
+static void init(void);
+static bool clock_init(void);
 static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
-static void MX_USB_PCD_Init(void);
-static void MX_USART3_UART_Init(void);
-static void MX_I2C1_Init(void);
+static bool debug_uart_init(void);
 
 /* Private user code ---------------------------------------------------------*/
+
 int main(void) {
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
-
-	/* Configure the system clock */
-	SystemClock_Config();
-
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_USART2_UART_Init();
-	MX_USB_PCD_Init();
-	MX_USART3_UART_Init();
-	MX_I2C1_Init();
-
-	cdcLinkInit();
+	init();
 
 	while (true) {
 	}
 }
 
-void SystemClock_Config(void) {
+void init(void) {
+	if (!clock_init())
+		error_handler();
+	HAL_Init();
+
+	MX_GPIO_Init();
+	if (!mtbbus_init())
+		error_handler();
+	if (!i2c_init())
+		error_handler();
+	cdcLinkInit();
+	debug_uart_init();
+}
+
+bool clock_init(void) {
 	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 	RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
@@ -53,7 +52,7 @@ void SystemClock_Config(void) {
 	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
 	RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL3;
 	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-		Error_Handler();
+		return false;
 
 	/** Initializes the CPU, AHB and APB buses clocks
 	*/
@@ -65,63 +64,24 @@ void SystemClock_Config(void) {
 	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
 	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-		Error_Handler();
+		return false;
 
 	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
 	PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
-	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-		Error_Handler();
+	return (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) == HAL_OK);
+
 }
 
-static void MX_I2C1_Init(void) {
-	hi2c1.Instance = I2C1;
-	hi2c1.Init.ClockSpeed = 100000;
-	hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-	hi2c1.Init.OwnAddress1 = 0;
-	hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-	hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-	hi2c1.Init.OwnAddress2 = 0;
-	hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-	hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-	if (HAL_I2C_Init(&hi2c1) != HAL_OK)
-		Error_Handler();
-}
-
-static void MX_USART2_UART_Init(void) {
-	huart2.Instance = USART2;
-	huart2.Init.BaudRate = 115200;
-	huart2.Init.WordLength = UART_WORDLENGTH_8B;
-	huart2.Init.StopBits = UART_STOPBITS_1;
-	huart2.Init.Parity = UART_PARITY_NONE;
-	huart2.Init.Mode = UART_MODE_TX_RX;
-	huart2.Init.HwFlowCtl = UART_HWCONTROL_CTS;
-	huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-	if (HAL_UART_Init(&huart2) != HAL_OK)
-		Error_Handler();
-}
-
-static void MX_USART3_UART_Init(void) {
-	huart3.Instance = USART3;
-	huart3.Init.BaudRate = 115200;
-	huart3.Init.WordLength = UART_WORDLENGTH_9B;
-	huart3.Init.StopBits = UART_STOPBITS_1;
-	huart3.Init.Parity = UART_PARITY_NONE;
-	huart3.Init.Mode = UART_MODE_TX_RX;
-	huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-	huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-	if (HAL_UART_Init(&huart3) != HAL_OK)
-		Error_Handler();
-}
-
-static void MX_USB_PCD_Init(void) {
-	hpcd_USB_FS.Instance = USB;
-	hpcd_USB_FS.Init.dev_endpoints = 8;
-	hpcd_USB_FS.Init.speed = PCD_SPEED_FULL;
-	hpcd_USB_FS.Init.low_power_enable = DISABLE;
-	hpcd_USB_FS.Init.lpm_enable = DISABLE;
-	hpcd_USB_FS.Init.battery_charging_enable = DISABLE;
-	if (HAL_PCD_Init(&hpcd_USB_FS) != HAL_OK)
-		Error_Handler();
+static bool debug_uart_init(void) {
+	h_uart_debug.Instance = USART2;
+	h_uart_debug.Init.BaudRate = 115200;
+	h_uart_debug.Init.WordLength = UART_WORDLENGTH_8B;
+	h_uart_debug.Init.StopBits = UART_STOPBITS_1;
+	h_uart_debug.Init.Parity = UART_PARITY_NONE;
+	h_uart_debug.Init.Mode = UART_MODE_TX_RX;
+	h_uart_debug.Init.HwFlowCtl = UART_HWCONTROL_CTS;
+	h_uart_debug.Init.OverSampling = UART_OVERSAMPLING_16;
+	return (HAL_UART_Init(&h_uart_debug) != HAL_OK);
 }
 
 static void MX_GPIO_Init(void) {
@@ -158,12 +118,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		HAL_IncTick();
 }
 
-void Error_Handler(void) {
+void error_handler(void) {
 	__disable_irq();
 	while (true);
 }
 
-#ifdef	USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line) {
 }
 #endif /* USE_FULL_ASSERT */
