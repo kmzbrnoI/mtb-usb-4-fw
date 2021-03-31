@@ -158,25 +158,3 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart) {
 		HAL_GPIO_DeInit(GPIOB, GPIO_PIN_10|GPIO_PIN_11);
 	}
 }
-
-/**
-* @brief PCD MSP Initialization
-* This function configures the hardware resources used in this example
-* @param hpcd: PCD handle pointer
-* @retval None
-*/
-void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd) {
-	if(hpcd->Instance==USB)
-		__HAL_RCC_USB_CLK_ENABLE();
-}
-
-/**
-* @brief PCD MSP De-Initialization
-* This function freeze the hardware resources used in this example
-* @param hpcd: PCD handle pointer
-* @retval None
-*/
-void HAL_PCD_MspDeInit(PCD_HandleTypeDef* hpcd) {
-	if(hpcd->Instance==USB)
-		__HAL_RCC_USB_CLK_DISABLE();
-}
