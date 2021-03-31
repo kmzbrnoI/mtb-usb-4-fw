@@ -25,35 +25,31 @@ const PinDef pin_debug_tx = {GPIOA, GPIO_PIN_2};
 const PinDef pin_debug_rx = {GPIOA, GPIO_PIN_3};
 
 
-void gpio_init(void) {
-	GPIO_InitTypeDef GPIO_InitStruct = {0};
+void gpio_pins_init(GPIO_TypeDef* port, uint32_t pinMask, uint32_t mode, uint32_t pull, uint32_t speed);
 
+
+void gpio_init(void) {
 	__HAL_RCC_GPIOA_CLK_ENABLE();
 	__HAL_RCC_GPIOB_CLK_ENABLE();
+	__HAL_RCC_GPIOC_CLK_ENABLE();
 	__HAL_RCC_GPIOD_CLK_ENABLE();
-
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2 | pin_led_blue.pin | pin_led_red.pin |
-	                  pin_led_yellow.pin | pin_led_green.pin, GPIO_PIN_RESET);
+	__HAL_RCC_GPIOE_CLK_ENABLE();
 
 	/*Configure GPIO pins : PB2 LED_BLUE_Pin LED_RED_Pin RED_YEL_Pin LED_GR_Pin */
-	GPIO_InitStruct.Pin = GPIO_PIN_2 | pin_led_blue.pin | pin_led_red.pin |
-	                      pin_led_yellow.pin | pin_led_green.pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-	/*Configure GPIO pins : PA8 PA9 */
-	GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	gpio_pins_init(
+		GPIOB,
+		pin_led_blue.pin | pin_led_red.pin | pin_led_yellow.pin | pin_led_green.pin,
+		GPIO_MODE_OUTPUT_PP,
+		GPIO_NOPULL,
+		GPIO_SPEED_FREQ_LOW
+	);
 
 	gpio_pin_init(pin_usb_dn, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
 	gpio_pin_init(pin_usb_dp, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
 	gpio_pin_init(pin_usb_dp_pullup, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW);
+
+	gpio_pin_init(pin_debug_a, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+	gpio_pin_init(pin_debug_b, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
 }
 
 void gpio_pins_init(GPIO_TypeDef* port, uint32_t pinMask, uint32_t mode, uint32_t pull, uint32_t speed) {

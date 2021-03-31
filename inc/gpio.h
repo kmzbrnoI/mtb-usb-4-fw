@@ -31,6 +31,7 @@ extern const PinDef pin_debug_cts;
 extern const PinDef pin_debug_tx;
 extern const PinDef pin_debug_rx;
 
+
 void gpio_init(void);
 
 inline void gpio_pin_init(PinDef pin, uint32_t mode, uint32_t pull, uint32_t speed);
