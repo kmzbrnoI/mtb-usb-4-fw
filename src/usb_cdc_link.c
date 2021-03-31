@@ -10,6 +10,10 @@
 #include "usb_cdc.h"
 //#include "utils/Debug.hpp"
 
+#define USB_LP_IRQ_HANDLER USB_LP_CAN1_RX0_IRQHandler
+const IRQn_Type usbLpIRQn = USB_LP_CAN1_RX0_IRQn;
+const unsigned usbLpIRQnPrio = 8;
+
 enum {
 	STRDESC_LANG,
 	STRDESC_MANUFACTURER,
@@ -36,7 +40,7 @@ const struct usb_string_descriptor manuf_desc_en = USB_STRING_DESC("KMZ Brno I")
 const struct usb_string_descriptor prod_desc_en = USB_STRING_DESC("MTB-USB v4");
 const struct usb_string_descriptor cdc_iface_desc_en = USB_STRING_DESC("MTB-USB Serial Interface");
 const struct usb_string_descriptor debug_iface_desc_en = USB_STRING_DESC("MTB-USB v4 Debug UART");
-struct usb_string_descriptor serial_number_desc_en = USB_STRING_DESC("0001");
+struct usb_string_descriptor serial_number_desc_en = USB_STRING_DESC("ffffffffffffffffffffffff"); // will be filled later
 
 static const struct usb_string_descriptor* const dtable[STRDESC_MAX] = {
 	&lang_desc,
@@ -329,14 +333,14 @@ static usbd_respond cdc_getdesc(
 	return usbd_ack;
 };
 
-static void tunnel_check_for_dfu_request(const struct usb_cdc_line_coding* coding) {
+/*static void tunnel_check_for_dfu_request(const struct usb_cdc_line_coding* coding) {
 #ifdef RBCX_SBOOT
 	if (coding->dwDTERate == 12345 && coding->bParityType == USB_CDC_EVEN_PARITY
 		&& coding->bCharFormat == USB_CDC_2_STOP_BITS) {
 		rebootToDfu();
 	}
 #endif
-}
+}*/
 
 static usbd_respond cdc_control_tunnel(usbd_device* dev, usbd_ctlreq* req) {
 	switch (req->bRequest) {
@@ -437,9 +441,8 @@ void cdcLinkInit() {
 	size_t sn_off = 0;
 	for (size_t i = 0; i < 3; i++) {
 		snprintf(buf, sizeof(buf), "%08lx", uid[i]);
-		for (int i = 0; i < 8; ++i) {
+		for (int i = 0; i < 8; ++i)
 			serial_number_desc_en.wString[sn_off++] = buf[i];
-		}
 	}
 
 	// reinit button and check
@@ -462,9 +465,8 @@ void cdcLinkInit() {
 	usbd_reg_control(&udev, cdc_control);
 	usbd_reg_descr(&udev, cdc_getdesc);
 
-	// TODO
-	// HAL_NVIC_SetPriority(usbLpIRQn, usbLpIRQnPrio, 0);
-	// HAL_NVIC_EnableIRQ(usbLpIRQn);
+	HAL_NVIC_SetPriority(usbLpIRQn, usbLpIRQnPrio, 0);
+	HAL_NVIC_EnableIRQ(usbLpIRQn);
 
 	usbd_enable(&udev, true);
 	usbd_connect(&udev, true);
