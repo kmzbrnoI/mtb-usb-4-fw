@@ -13,7 +13,7 @@ static void init(void);
 static bool clock_init(void);
 static bool debug_uart_init(void);
 
-/* Private user code ---------------------------------------------------------*/
+/* Private code --------------------------------------------------------------*/
 
 int main(void) {
 	init();
@@ -128,3 +128,37 @@ void error_handler(void) {
 void assert_failed(uint8_t *file, uint32_t line) {
 }
 #endif /* USE_FULL_ASSERT */
+
+/* Interrupt handlers --------------------------------------------------------*/
+
+// This function handles Non maskable interrupt.
+void NMI_Handler(void) {
+	while (true);
+}
+
+void HardFault_Handler(void) {
+	while (true);
+}
+
+void MemManage_Handler(void) {
+	while (true);
+}
+
+void BusFault_Handler(void) {
+	while (true);
+}
+
+void UsageFault_Handler(void) {
+	while (true);
+}
+
+void SVC_Handler(void) {}
+
+void DebugMon_Handler(void) {}
+
+// This function handles Pendable request for system service.
+void PendSV_Handler(void) {}
+
+void SysTick_Handler(void) {
+	HAL_IncTick();
+}
