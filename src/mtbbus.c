@@ -18,8 +18,8 @@ bool mtbbus_init(void) {
 
 	__HAL_RCC_USART3_CLK_ENABLE();
 
-	gpio_pin_init(pin_usart_mtb_tx, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH);
+	gpio_pin_init(pin_usart_mtb_tx, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, false);
+	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, false);
 
 	return true;
 }

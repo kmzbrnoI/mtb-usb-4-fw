@@ -456,8 +456,7 @@ void cdcLinkInit() {
 		config_desc.config.wTotalLength = sizeof(config_desc);
 	} else {
 		config_desc.config.bNumInterfaces = INTERFACE_COUNT_NODEBUG;
-		config_desc.config.wTotalLength
-			= sizeof(config_desc) - DebugDescriptorsSize;
+		config_desc.config.wTotalLength = sizeof(config_desc) - DebugDescriptorsSize;
 	}
 
 	usbd_init(&udev, &usbd_hw, CDC_EP0_SIZE, ubuf, sizeof(ubuf));

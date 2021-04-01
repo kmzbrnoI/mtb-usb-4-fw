@@ -25,7 +25,8 @@ const PinDef pin_debug_tx = {GPIOA, GPIO_PIN_2};
 const PinDef pin_debug_rx = {GPIOA, GPIO_PIN_3};
 
 
-void gpio_pins_init(GPIO_TypeDef* port, uint32_t pinMask, uint32_t mode, uint32_t pull, uint32_t speed);
+void gpio_pins_init(GPIO_TypeDef* port, uint32_t pinMask, uint32_t mode,
+                    uint32_t pull, uint32_t speed, bool de_init_first);
 
 
 void gpio_init(void) {
@@ -41,18 +42,26 @@ void gpio_init(void) {
 		pin_led_blue.pin | pin_led_red.pin | pin_led_yellow.pin | pin_led_green.pin,
 		GPIO_MODE_OUTPUT_PP,
 		GPIO_NOPULL,
-		GPIO_SPEED_FREQ_LOW
+		GPIO_SPEED_FREQ_LOW,
+		false
 	);
 
-	gpio_pin_init(pin_usb_dn, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-	gpio_pin_init(pin_usb_dp, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-	gpio_pin_init(pin_usb_dp_pullup, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW);
+	gpio_pin_init(pin_usb_dn, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, false);
+	gpio_pin_init(pin_usb_dp, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, false);
+	gpio_pin_init(pin_usb_dp_pullup, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW, false);
 
-	gpio_pin_init(pin_debug_a, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
-	gpio_pin_init(pin_debug_b, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+	gpio_pin_init(pin_debug_a, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, false);
+	gpio_pin_init(pin_debug_b, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, false);
 }
 
-void gpio_pins_init(GPIO_TypeDef* port, uint32_t pinMask, uint32_t mode, uint32_t pull, uint32_t speed) {
+void gpio_pins_init(GPIO_TypeDef* port, uint32_t pinMask, uint32_t mode,
+                    uint32_t pull, uint32_t speed, bool de_init_first) {
+
+	// HAL_GPIO_Init leaves some flags set if called multiple times
+	// on the same pin
+	if (de_init_first)
+		HAL_GPIO_DeInit(port, pinMask);
+
 	GPIO_InitTypeDef init;
 	init.Pin = pinMask;
 	init.Mode = mode;
@@ -61,8 +70,8 @@ void gpio_pins_init(GPIO_TypeDef* port, uint32_t pinMask, uint32_t mode, uint32_
 	HAL_GPIO_Init(port, &init);
 }
 
-inline void gpio_pin_init(PinDef pin, uint32_t mode, uint32_t pull, uint32_t speed) {
-	gpio_pins_init(pin.port, pin.pin, mode, pull, speed);
+inline void gpio_pin_init(PinDef pin, uint32_t mode, uint32_t pull, uint32_t speed, bool de_init_first) {
+	gpio_pins_init(pin.port, pin.pin, mode, pull, speed, de_init_first);
 }
 
 bool gpio_pin_read(PinDef pin) {
