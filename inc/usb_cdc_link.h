@@ -16,5 +16,5 @@
 
 extern usbd_device udev;
 
-void cdcLinkInit();
-bool cdcLinkIsDebugEpEnabled();
+void cdc_init();
+bool cdc_is_debug_ep_enabled();

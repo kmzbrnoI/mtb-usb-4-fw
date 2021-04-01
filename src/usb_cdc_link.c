@@ -425,7 +425,7 @@ static usbd_respond cdc_setconf(usbd_device* dev, uint8_t cfg) {
 	}
 }
 
-void cdcLinkInit() {
+void cdc_init() {
 	__HAL_RCC_USB_CLK_ENABLE();
 
 	// quickly charge Button capacitor
@@ -449,7 +449,7 @@ void cdcLinkInit() {
 	// for (volatile int i = 0; i < 5000; ++i);
 	// pinInit(button3Pin, GPIO_MODE_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_LOW, true);
 	// enableDebugEp = !pinRead(button3Pin) || (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk);
-	enableDebugEp = false;
+	enableDebugEp = true;
 
 	if (enableDebugEp) {
 		config_desc.config.bNumInterfaces = INTERFACE_COUNT_ALL;
@@ -471,6 +471,6 @@ void cdcLinkInit() {
 	usbd_connect(&udev, true);
 }
 
-bool cdcLinkIsDebugEpEnabled() { return enableDebugEp; }
+bool cdc_is_debug_ep_enabled() { return enableDebugEp; }
 
 void USB_LP_IRQ_HANDLER(void) { usbd_poll(&udev); }

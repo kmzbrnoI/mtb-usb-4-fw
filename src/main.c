@@ -40,7 +40,7 @@ void init(void) {
 		error_handler();
 	if (!i2c_init())
 		error_handler();
-	cdcLinkInit();
+	cdc_init();
 	debug_uart_init();
 
 	__HAL_AFIO_REMAP_SWJ_NOJTAG();
