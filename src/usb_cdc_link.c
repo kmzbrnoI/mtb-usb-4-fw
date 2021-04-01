@@ -5,6 +5,17 @@
 #include <string.h>
 #include "usb_cdc_link.h"
 #include "usb_cdc.h"
+#include "gpio.h"
+
+static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep);
+
+struct {
+	uint32_t pos;
+	uint8_t fifo[CDC_MTBBUS_BUF_SIZE];
+} rx;
+
+void (*cdc_main_received)(uint8_t command_code, uint8_t *data, size_t data_size);
+
 
 #define USB_LP_IRQ_HANDLER USB_LP_CAN1_RX0_IRQHandler
 const IRQn_Type usbLpIRQn = USB_LP_CAN1_RX0_IRQn;
@@ -415,6 +426,9 @@ static usbd_respond cdc_setconf(usbd_device* dev, uint8_t cfg) {
 			usbd_ep_config(dev, CDC_DEBUG_TXD_EP, USB_EPTYPE_BULK /*| USB_EPTYPE_DBLBUF*/, CDC_DATA_SZ);
 			usbd_ep_config(dev, CDC_DEBUG_NTF_EP, USB_EPTYPE_INTERRUPT, CDC_NTF_SZ);
 		}
+
+		usbd_reg_endpoint(dev, CDC_MAIN_RXD_EP, main_cdc_rx);
+
 		return usbd_ack;
 	default:
 		return usbd_fail;
@@ -427,6 +441,8 @@ void cdc_init() {
 	// quickly charge Button capacitor
 	// pinInit(button3Pin, GPIO_MODE_OUTPUT_PP, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, true);
 	// pinWrite(button3Pin, 1);
+
+	rx.pos = 0;
 
 	uint32_t uid[3];
 	uid[0] = HAL_GetUIDw0();
@@ -467,6 +483,37 @@ void cdc_init() {
 	usbd_connect(&udev, true);
 }
 
-bool cdc_is_debug_ep_enabled() { return enableDebugEp; }
+bool cdc_is_debug_ep_enabled() {
+	return enableDebugEp;
+}
 
-void USB_LP_IRQ_HANDLER(void) { usbd_poll(&udev); }
+void USB_LP_IRQ_HANDLER(void) {
+	usbd_poll(&udev);
+}
+
+static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep) {
+	const size_t RX_MAX_DELAY_MS = 20;
+	static size_t last_time = 0;
+	if ((rx.pos > 0) && (last_time+RX_MAX_DELAY_MS < HAL_GetTick()))
+		rx.pos = 0;
+	last_time = HAL_GetTick();
+
+	rx.pos += usbd_ep_read(dev, ep, &rx.fifo[rx.pos], CDC_DATA_SZ);
+
+	if (rx.pos >= 3) {
+		if ((rx.fifo[0] != 0x2A) || (rx.fifo[1] != 0x42)) {
+			rx.pos = 0;
+			return;
+		}
+		uint8_t length = rx.fifo[2];
+		if (length > 123) { // invalid data
+			rx.pos = 0;
+			return;
+		}
+		if (rx.pos >= length+3) {
+			if (cdc_main_received != NULL)
+				cdc_main_received(rx.fifo[3], &rx.fifo[4], length-1);
+			rx.pos = 0;
+		}
+	}
+}

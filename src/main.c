@@ -12,6 +12,7 @@ static void error_handler();
 static void init(void);
 static bool clock_init(void);
 static bool debug_uart_init(void);
+void usb_received(uint8_t command_code, uint8_t *data, size_t data_size);
 
 /* Private code --------------------------------------------------------------*/
 
@@ -40,7 +41,10 @@ void init(void) {
 		error_handler();
 	if (!i2c_init())
 		error_handler();
+
 	cdc_init();
+	cdc_main_received = usb_received;
+
 	debug_uart_init();
 
 	__HAL_AFIO_REMAP_SWJ_NOJTAG();
@@ -161,4 +165,10 @@ void PendSV_Handler(void) {}
 
 void SysTick_Handler(void) {
 	HAL_IncTick();
+}
+
+/* USB -----------------------------------------------------------------------*/
+
+void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
+	gpio_pin_toggle(pin_led_red);
 }

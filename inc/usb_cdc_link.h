@@ -13,8 +13,9 @@
 
 #define CDC_DATA_SZ 0x40
 #define CDC_NTF_SZ 0x08
+#define CDC_MTBBUS_BUF_SIZE 0x80
 
-extern usbd_device udev;
+extern void (*cdc_main_received)(uint8_t command_code, uint8_t *data, size_t data_size);
 
 void cdc_init();
 bool cdc_is_debug_ep_enabled();
