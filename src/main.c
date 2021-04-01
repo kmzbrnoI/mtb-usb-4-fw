@@ -171,4 +171,5 @@ void SysTick_Handler(void) {
 
 void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 	gpio_pin_toggle(pin_led_red);
+	cdc_send_ack();
 }

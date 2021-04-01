@@ -5,7 +5,6 @@
 #include <string.h>
 #include "usb_cdc_link.h"
 #include "usb_cdc.h"
-#include "gpio.h"
 
 static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep);
 static void main_cdc_tx(usbd_device *dev, uint8_t event, uint8_t ep);
@@ -28,6 +27,7 @@ void (*cdc_main_received)(uint8_t command_code, uint8_t *data, size_t data_size)
 #define USB_LP_IRQ_HANDLER USB_LP_CAN1_RX0_IRQHandler
 const IRQn_Type usbLpIRQn = USB_LP_CAN1_RX0_IRQn;
 const unsigned usbLpIRQnPrio = 8;
+bool dtr_ready = false;
 
 enum {
 	STRDESC_LANG,
@@ -360,6 +360,7 @@ static usbd_respond cdc_getdesc(
 static usbd_respond cdc_control_main(usbd_device* dev, usbd_ctlreq* req) {
 	switch (req->bRequest) {
 	case USB_CDC_SET_CONTROL_LINE_STATE: {
+		dtr_ready = req->wValue & 0x1;
 		return usbd_ack;
 	}
 	case USB_CDC_SET_LINE_CODING: {
@@ -471,7 +472,6 @@ void cdc_init() {
 	// for (volatile int i = 0; i < 5000; ++i);
 	// pinInit(button3Pin, GPIO_MODE_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_LOW, true);
 	// enableDebugEp = !pinRead(button3Pin) || (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk);
-	enableDebugEp = true;
 
 	if (enableDebugEp) {
 		config_desc.config.bNumInterfaces = INTERFACE_COUNT_ALL;
@@ -502,6 +502,9 @@ void USB_LP_IRQ_HANDLER(void) {
 }
 
 static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep) {
+	if (event != usbd_evt_eprx)
+		return;
+
 	const size_t RX_MAX_DELAY_MS = 20;
 	static size_t last_time = 0;
 	if ((rx.pos > 0) && (last_time+RX_MAX_DELAY_MS < HAL_GetTick()))
@@ -530,14 +533,20 @@ static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep) {
 
 
 static void main_cdc_tx(usbd_device *dev, uint8_t event, uint8_t ep) {
+	if (event != usbd_evt_eptx)
+		return;
+
+	if (tx.pos >= tx.size) {
+		tx.sending = false;
+		return;
+	}
+
 	tx.pos += usbd_ep_write(dev, CDC_MAIN_TXD_EP, &tx.fifo[tx.pos],
 	                        (tx.size-tx.pos < CDC_DATA_SZ) ? tx.size : CDC_DATA_SZ);
-	if (tx.pos >= tx.size)
-		tx.sending = false;
 }
 
 bool cdc_main_can_send(void) {
-	return !tx.sending;
+	return !tx.sending && dtr_ready;
 }
 
 bool cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize) {
@@ -551,6 +560,28 @@ bool cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize) {
 
 	memcpy(tx.fifo+4, data, datasize);
 	tx.size = datasize+4;
+	tx.pos = 0;
+	tx.sending = true;
+
+	tx.pos += usbd_ep_write(&udev, CDC_MAIN_TXD_EP, tx.fifo,
+	                        (tx.size < CDC_DATA_SZ) ? tx.size : CDC_DATA_SZ);
+
+	if (tx.pos == 0) {
+		// PC does not read data
+		tx.sending = false;
+		return false;
+	}
 
 	return true;
+}
+
+void cdc_send_ack(void) {
+	if (cdc_main_can_send())
+		cdc_main_send(MTBUSB_CMD_MP_ACK, NULL, 0);
+}
+
+void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module) {
+	uint8_t buf[3] = {error_code, command_code, module};
+	if (cdc_main_can_send())
+		cdc_main_send(MTBUSB_CMD_MP_ACK, buf, 3);
 }

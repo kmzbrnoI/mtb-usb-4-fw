@@ -22,6 +22,9 @@ bool cdc_is_debug_ep_enabled();
 bool cdc_main_can_send(void);
 bool cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize);
 
+void cdc_send_ack(void);
+void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module);
+
 #define MTBUSB_CMD_PM_FORWARD 0x10
 #define MTBUSB_CMD_PM_INFO_REQ 0x20
 #define MTBUSB_CMD_PM_CHANGE_SPEED 0x21
