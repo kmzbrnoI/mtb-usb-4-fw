@@ -1,5 +1,6 @@
 #include "mtbbus.h"
 #include "stm32f1xx_hal.h"
+#include "gpio.h"
 
 UART_HandleTypeDef h_uart_mtbbus;
 
@@ -12,5 +13,13 @@ bool mtbbus_init(void) {
 	h_uart_mtbbus.Init.Mode = UART_MODE_TX_RX;
 	h_uart_mtbbus.Init.HwFlowCtl = UART_HWCONTROL_NONE;
 	h_uart_mtbbus.Init.OverSampling = UART_OVERSAMPLING_16;
-	return (HAL_UART_Init(&h_uart_mtbbus) == HAL_OK);
+	if (HAL_UART_Init(&h_uart_mtbbus) != HAL_OK)
+		return false;
+
+	__HAL_RCC_USART3_CLK_ENABLE();
+
+	gpio_pin_init(pin_usart_mtb_tx, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH);
+
+	return true;
 }

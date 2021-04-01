@@ -43,6 +43,8 @@ void init(void) {
 	cdcLinkInit();
 	debug_uart_init();
 
+	__HAL_AFIO_REMAP_SWJ_NOJTAG();
+
 	HAL_Delay(100);
 
 	gpio_pin_write(pin_led_red, false);
@@ -82,7 +84,13 @@ bool clock_init(void) {
 	// USB 48 MHz
 	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
 	PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
-	return (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) == HAL_OK);
+	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+		return false;
+
+	__HAL_RCC_AFIO_CLK_ENABLE();
+	__HAL_RCC_PWR_CLK_ENABLE();
+
+	return true;
 }
 
 static bool debug_uart_init(void) {
@@ -94,7 +102,16 @@ static bool debug_uart_init(void) {
 	h_uart_debug.Init.Mode = UART_MODE_TX_RX;
 	h_uart_debug.Init.HwFlowCtl = UART_HWCONTROL_CTS;
 	h_uart_debug.Init.OverSampling = UART_OVERSAMPLING_16;
-	return (HAL_UART_Init(&h_uart_debug) != HAL_OK);
+	if (HAL_UART_Init(&h_uart_debug) != HAL_OK)
+		return false;
+
+	__HAL_RCC_USART2_CLK_ENABLE();
+
+	gpio_pin_init(pin_debug_cts, GPIO_MODE_INPUT, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW);
+	gpio_pin_init(pin_debug_rx, GPIO_MODE_INPUT, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW);
+	gpio_pin_init(pin_debug_tx, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW);
+
+	return true;
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
