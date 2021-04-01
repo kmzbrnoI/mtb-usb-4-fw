@@ -8,11 +8,19 @@
 #include "gpio.h"
 
 static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep);
+static void main_cdc_tx(usbd_device *dev, uint8_t event, uint8_t ep);
 
 struct {
 	uint32_t pos;
-	uint8_t fifo[CDC_MTBBUS_BUF_SIZE];
+	uint8_t fifo[CDC_MTBUSB_BUF_SIZE];
 } rx;
+
+struct {
+	uint32_t pos;
+	bool sending;
+	uint8_t fifo[CDC_MTBUSB_BUF_SIZE];
+	size_t size;
+} tx;
 
 void (*cdc_main_received)(uint8_t command_code, uint8_t *data, size_t data_size);
 
@@ -428,6 +436,7 @@ static usbd_respond cdc_setconf(usbd_device* dev, uint8_t cfg) {
 		}
 
 		usbd_reg_endpoint(dev, CDC_MAIN_RXD_EP, main_cdc_rx);
+		usbd_reg_endpoint(dev, CDC_MAIN_TXD_EP, main_cdc_tx);
 
 		return usbd_ack;
 	default:
@@ -443,6 +452,7 @@ void cdc_init() {
 	// pinWrite(button3Pin, 1);
 
 	rx.pos = 0;
+	tx.sending = false;
 
 	uint32_t uid[3];
 	uid[0] = HAL_GetUIDw0();
@@ -516,4 +526,31 @@ static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep) {
 			rx.pos = 0;
 		}
 	}
+}
+
+
+static void main_cdc_tx(usbd_device *dev, uint8_t event, uint8_t ep) {
+	tx.pos += usbd_ep_write(dev, CDC_MAIN_TXD_EP, &tx.fifo[tx.pos],
+	                        (tx.size-tx.pos < CDC_DATA_SZ) ? tx.size : CDC_DATA_SZ);
+	if (tx.pos >= tx.size)
+		tx.sending = false;
+}
+
+bool cdc_main_can_send(void) {
+	return !tx.sending;
+}
+
+bool cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize) {
+	if ((!cdc_main_can_send()) || (datasize > CDC_MTBUSB_BUF_SIZE-4))
+		return false;
+
+	tx.fifo[0] = 0x2A;
+	tx.fifo[1] = 0x42;
+	tx.fifo[2] = datasize+1;
+	tx.fifo[3] = command_code;
+
+	memcpy(tx.fifo+4, data, datasize);
+	tx.size = datasize+4;
+
+	return true;
 }
