@@ -3,12 +3,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-//#include "Bsp.hpp"
-//#include "CdcUartTunnel.hpp"
-//#include "Esp32Manager.hpp"
 #include "usb_cdc_link.h"
 #include "usb_cdc.h"
-//#include "utils/Debug.hpp"
 
 #define USB_LP_IRQ_HANDLER USB_LP_CAN1_RX0_IRQHandler
 const IRQn_Type usbLpIRQn = USB_LP_CAN1_RX0_IRQn;
@@ -26,8 +22,8 @@ enum {
 };
 
 enum {
-	INTERFACE_TUNNEL_COMM,
-	INTERFACE_TUNNEL_DATA,
+	INTERFACE_MAIN_COMM,
+	INTERFACE_MAIN_DATA,
 	INTERFACE_DEBUG_COMM,
 	INTERFACE_DEBUG_DATA,
 
@@ -72,16 +68,16 @@ static const size_t DebugDescriptorsSize = sizeof(__debug_descriptors);
 struct cdc_config {
 	struct usb_config_descriptor config;
 
-	struct usb_iad_descriptor tunnel_comm_iad;
-	struct usb_interface_descriptor tunnel_comm;
-	struct usb_cdc_header_desc tunnel_cdc_hdr;
-	struct usb_cdc_call_mgmt_desc tunnel_cdc_mgmt;
-	struct usb_cdc_acm_desc tunnel_cdc_acm;
-	struct usb_cdc_union_desc tunnel_cdc_union;
-	struct usb_endpoint_descriptor tunnel_comm_ep;
-	struct usb_interface_descriptor tunnel_data;
-	struct usb_endpoint_descriptor tunnel_data_eprx;
-	struct usb_endpoint_descriptor tunnel_data_eptx;
+	struct usb_iad_descriptor main_comm_iad;
+	struct usb_interface_descriptor main_comm;
+	struct usb_cdc_header_desc main_cdc_hdr;
+	struct usb_cdc_call_mgmt_desc main_cdc_mgmt;
+	struct usb_cdc_acm_desc main_cdc_acm;
+	struct usb_cdc_union_desc main_cdc_union;
+	struct usb_endpoint_descriptor main_comm_ep;
+	struct usb_interface_descriptor main_data;
+	struct usb_endpoint_descriptor main_data_eprx;
+	struct usb_endpoint_descriptor main_data_eptx;
 
 	DEBUG_DESCRIPTORS
 } __attribute__((packed));
@@ -115,20 +111,20 @@ static struct cdc_config config_desc = {
 		.bMaxPower = USB_CFG_POWER_MA(100),
 	},
 
-	.tunnel_comm_iad = {
+	.main_comm_iad = {
 		.bLength = sizeof(struct usb_iad_descriptor),
 		.bDescriptorType = USB_DTYPE_INTERFASEASSOC,
-		.bFirstInterface = INTERFACE_TUNNEL_COMM,
+		.bFirstInterface = INTERFACE_MAIN_COMM,
 		.bInterfaceCount = 2,
 		.bFunctionClass = USB_CLASS_CDC,
 		.bFunctionSubClass = USB_CDC_SUBCLASS_ACM,
 		.bFunctionProtocol = USB_PROTO_NONE,
 		.iFunction = NO_DESCRIPTOR,
 	},
-	.tunnel_comm = {
+	.main_comm = {
 		.bLength = sizeof(struct usb_interface_descriptor),
 		.bDescriptorType = USB_DTYPE_INTERFACE,
-		.bInterfaceNumber = INTERFACE_TUNNEL_COMM,
+		.bInterfaceNumber = INTERFACE_MAIN_COMM,
 		.bAlternateSetting = 0,
 		.bNumEndpoints = 1,
 		.bInterfaceClass = USB_CLASS_CDC,
@@ -136,44 +132,44 @@ static struct cdc_config config_desc = {
 		.bInterfaceProtocol = USB_PROTO_NONE,
 		.iInterface = NO_DESCRIPTOR,
 	},
-	.tunnel_cdc_hdr = {
+	.main_cdc_hdr = {
 		.bFunctionLength = sizeof(struct usb_cdc_header_desc),
 		.bDescriptorType = USB_DTYPE_CS_INTERFACE,
 		.bDescriptorSubType = USB_DTYPE_CDC_HEADER,
 		.bcdCDC = VERSION_BCD(1, 1, 0),
 	},
-	.tunnel_cdc_mgmt = {
+	.main_cdc_mgmt = {
 		.bFunctionLength = sizeof(struct usb_cdc_call_mgmt_desc),
 		.bDescriptorType = USB_DTYPE_CS_INTERFACE,
 		.bDescriptorSubType = USB_DTYPE_CDC_CALL_MANAGEMENT,
 		.bmCapabilities = 0,
-		.bDataInterface = INTERFACE_TUNNEL_DATA,
+		.bDataInterface = INTERFACE_MAIN_DATA,
 	},
-	.tunnel_cdc_acm = {
+	.main_cdc_acm = {
 		.bFunctionLength = sizeof(struct usb_cdc_acm_desc),
 		.bDescriptorType = USB_DTYPE_CS_INTERFACE,
 		.bDescriptorSubType = USB_DTYPE_CDC_ACM,
 		.bmCapabilities = 0,
 	},
-	.tunnel_cdc_union = {
+	.main_cdc_union = {
 		.bFunctionLength = sizeof(struct usb_cdc_union_desc),
 		.bDescriptorType = USB_DTYPE_CS_INTERFACE,
 		.bDescriptorSubType = USB_DTYPE_CDC_UNION,
-		.bMasterInterface0 = INTERFACE_TUNNEL_COMM,
-		.bSlaveInterface0 = INTERFACE_TUNNEL_DATA,
+		.bMasterInterface0 = INTERFACE_MAIN_COMM,
+		.bSlaveInterface0 = INTERFACE_MAIN_DATA,
 	},
-	.tunnel_comm_ep = {
+	.main_comm_ep = {
 		.bLength = sizeof(struct usb_endpoint_descriptor),
 		.bDescriptorType = USB_DTYPE_ENDPOINT,
-		.bEndpointAddress = CDC_TUNNEL_NTF_EP,
+		.bEndpointAddress = CDC_MAIN_NTF_EP,
 		.bmAttributes = USB_EPTYPE_INTERRUPT,
 		.wMaxPacketSize = CDC_NTF_SZ,
 		.bInterval = 0xFF,
 	},
-	.tunnel_data = {
+	.main_data = {
 		.bLength = sizeof(struct usb_interface_descriptor),
 		.bDescriptorType = USB_DTYPE_INTERFACE,
-		.bInterfaceNumber = INTERFACE_TUNNEL_DATA,
+		.bInterfaceNumber = INTERFACE_MAIN_DATA,
 		.bAlternateSetting = 0,
 		.bNumEndpoints = 2,
 		.bInterfaceClass = USB_CLASS_CDC_DATA,
@@ -181,18 +177,18 @@ static struct cdc_config config_desc = {
 		.bInterfaceProtocol = USB_PROTO_NONE,
 		.iInterface = STRDESC_CDC_IFACE,
 	},
-	.tunnel_data_eprx = {
+	.main_data_eprx = {
 		.bLength = sizeof(struct usb_endpoint_descriptor),
 		.bDescriptorType = USB_DTYPE_ENDPOINT,
-		.bEndpointAddress = CDC_TUNNEL_RXD_EP,
+		.bEndpointAddress = CDC_MAIN_RXD_EP,
 		.bmAttributes = USB_EPTYPE_BULK,
 		.wMaxPacketSize = CDC_DATA_SZ,
 		.bInterval = 0x01,
 	},
-	.tunnel_data_eptx = {
+	.main_data_eptx = {
 		.bLength = sizeof(struct usb_endpoint_descriptor),
 		.bDescriptorType = USB_DTYPE_ENDPOINT,
-		.bEndpointAddress = CDC_TUNNEL_TXD_EP,
+		.bEndpointAddress = CDC_MAIN_TXD_EP,
 		.bmAttributes = USB_EPTYPE_BULK,
 		.wMaxPacketSize = CDC_DATA_SZ,
 		.bInterval = 0x01,
@@ -287,7 +283,7 @@ usbd_device udev;
 static uint32_t ubuf[0x20];
 static bool enableDebugEp = false;
 
-static struct usb_cdc_line_coding cdc_line_tunnel = {
+static struct usb_cdc_line_coding cdc_line_main = {
 	.dwDTERate = 115200,
 	.bCharFormat = USB_CDC_1_STOP_BITS,
 	.bParityType = USB_CDC_NO_PARITY,
@@ -333,7 +329,7 @@ static usbd_respond cdc_getdesc(
 	return usbd_ack;
 };
 
-/*static void tunnel_check_for_dfu_request(const struct usb_cdc_line_coding* coding) {
+/*static void main_check_for_dfu_request(const struct usb_cdc_line_coding* coding) {
 #ifdef RBCX_SBOOT
 	if (coding->dwDTERate == 12345 && coding->bParityType == USB_CDC_EVEN_PARITY
 		&& coding->bCharFormat == USB_CDC_2_STOP_BITS) {
@@ -342,18 +338,18 @@ static usbd_respond cdc_getdesc(
 #endif
 }*/
 
-static usbd_respond cdc_control_tunnel(usbd_device* dev, usbd_ctlreq* req) {
+static usbd_respond cdc_control_main(usbd_device* dev, usbd_ctlreq* req) {
 	switch (req->bRequest) {
 	case USB_CDC_SET_CONTROL_LINE_STATE: {
 		return usbd_ack;
 	}
 	case USB_CDC_SET_LINE_CODING: {
-		memcpy(&cdc_line_tunnel, req->data, sizeof(cdc_line_tunnel));
+		memcpy(&cdc_line_main, req->data, sizeof(cdc_line_main));
 		return usbd_ack;
 	}
 	case USB_CDC_GET_LINE_CODING:
-		dev->status.data_ptr = &cdc_line_tunnel;
-		dev->status.data_count = sizeof(cdc_line_tunnel);
+		dev->status.data_ptr = &cdc_line_main;
+		dev->status.data_count = sizeof(cdc_line_main);
 		return usbd_ack;
 	default:
 		return usbd_fail;
@@ -386,8 +382,8 @@ static usbd_respond cdc_control(usbd_device* dev, usbd_ctlreq* req, usbd_rqc_cal
 	if (((USB_REQ_RECIPIENT | USB_REQ_TYPE) & req->bmRequestType)
 		== (USB_REQ_INTERFACE | USB_REQ_CLASS)) {
 		switch (req->wIndex) {
-		case INTERFACE_TUNNEL_COMM:
-			return cdc_control_tunnel(dev, req);
+		case INTERFACE_MAIN_COMM:
+			return cdc_control_main(dev, req);
 		case INTERFACE_DEBUG_COMM:
 			return cdc_control_debug(dev, req);
 		}
@@ -399,9 +395,9 @@ static usbd_respond cdc_setconf(usbd_device* dev, uint8_t cfg) {
 	switch (cfg) {
 	case 0:
 		/* deconfiguring device */
-		usbd_ep_deconfig(dev, CDC_TUNNEL_NTF_EP);
-		usbd_ep_deconfig(dev, CDC_TUNNEL_TXD_EP);
-		usbd_ep_deconfig(dev, CDC_TUNNEL_RXD_EP);
+		usbd_ep_deconfig(dev, CDC_MAIN_NTF_EP);
+		usbd_ep_deconfig(dev, CDC_MAIN_TXD_EP);
+		usbd_ep_deconfig(dev, CDC_MAIN_RXD_EP);
 		if (enableDebugEp) {
 			usbd_ep_deconfig(dev, CDC_DEBUG_NTF_EP);
 			usbd_ep_deconfig(dev, CDC_DEBUG_TXD_EP);
@@ -410,9 +406,9 @@ static usbd_respond cdc_setconf(usbd_device* dev, uint8_t cfg) {
 		return usbd_ack;
 	case 1:
 		/* configuring device */
-		usbd_ep_config(dev, CDC_TUNNEL_RXD_EP, USB_EPTYPE_BULK /*| USB_EPTYPE_DBLBUF*/, CDC_DATA_SZ);
-		usbd_ep_config(dev, CDC_TUNNEL_TXD_EP, USB_EPTYPE_BULK /*| USB_EPTYPE_DBLBUF*/, CDC_DATA_SZ);
-		usbd_ep_config(dev, CDC_TUNNEL_NTF_EP, USB_EPTYPE_INTERRUPT, CDC_NTF_SZ);
+		usbd_ep_config(dev, CDC_MAIN_RXD_EP, USB_EPTYPE_BULK /*| USB_EPTYPE_DBLBUF*/, CDC_DATA_SZ);
+		usbd_ep_config(dev, CDC_MAIN_TXD_EP, USB_EPTYPE_BULK /*| USB_EPTYPE_DBLBUF*/, CDC_DATA_SZ);
+		usbd_ep_config(dev, CDC_MAIN_NTF_EP, USB_EPTYPE_INTERRUPT, CDC_NTF_SZ);
 
 		if (enableDebugEp) {
 			usbd_ep_config(dev, CDC_DEBUG_RXD_EP, USB_EPTYPE_BULK /*| USB_EPTYPE_DBLBUF*/, CDC_DATA_SZ);
