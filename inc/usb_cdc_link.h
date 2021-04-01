@@ -13,9 +13,24 @@
 
 #define CDC_DATA_SZ 0x40
 #define CDC_NTF_SZ 0x08
-#define CDC_MTBBUS_BUF_SIZE 0x80
+#define CDC_MTBUSB_BUF_SIZE 0x80
 
 extern void (*cdc_main_received)(uint8_t command_code, uint8_t *data, size_t data_size);
 
 void cdc_init();
 bool cdc_is_debug_ep_enabled();
+bool cdc_main_can_send(void);
+bool cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize);
+
+#define MTBUSB_CMD_PM_FORWARD 0x10
+#define MTBUSB_CMD_PM_INFO_REQ 0x20
+#define MTBUSB_CMD_PM_CHANGE_SPEED 0x21
+#define MTBUSB_CMD_PM_ACTIVE_MODULES_REQ 0x22
+
+#define MTBUSB_CMD_MP_ACK 0x01
+#define MTBUSB_CMD_MP_ERROR 0x02
+#define MTBUSB_CMD_MP_FORWARD 0x10
+#define MTBUSB_CMD_MP_INFO 0x20
+#define MTBUSB_CMD_MP_ACTIVE_MODULES_LIST 0x22
+#define MTBUSB_CMD_MP_NEW_MODULE 0x23
+#define MTBUSB_CMD_MP_MODULE_FAILED 0x24
