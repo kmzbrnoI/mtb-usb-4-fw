@@ -28,6 +28,8 @@ C_SOURCES = \
 	$(STM32_SRC_PATH)/stm32f1xx_hal_pcd.c \
 	$(STM32_SRC_PATH)/stm32f1xx_hal_pcd_ex.c \
 	$(STM32_SRC_PATH)/stm32f1xx_ll_usb.c \
+	$(STM32_SRC_PATH)/stm32f1xx_ll_usart.c \
+	$(STM32_SRC_PATH)/stm32f1xx_ll_rcc.c \
 	lib/libusb_stm32/src/usbd_stm32f103_devfs.c \
 	lib/libusb_stm32/src/usbd_core.c \
 	$(wildcard src/*.c)
@@ -62,11 +64,13 @@ AS_DEFS =
 
 C_DEFS = \
 	-DUSE_HAL_DRIVER \
-	-DSTM32F103xB
+	-DSTM32F103xB \
+	-DUSE_FULL_LL_DRIVER
 
 CPP_DEFS = \
 	-DUSE_HAL_DRIVER \
-	-DSTM32F103xB
+	-DSTM32F103xB \
+	-DUSE_FULL_LL_DRIVER
 
 
 CPP_INCLUDES =

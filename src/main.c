@@ -18,9 +18,14 @@ void usb_received(uint8_t command_code, uint8_t *data, size_t data_size);
 
 int main(void) {
 	init();
+	static uint8_t data[5] = {0x01, 0x02, 0x03, 0x04, 0x05};
 
 	while (true) {
 		gpio_pin_toggle(pin_led_blue);
+		if (mtbbus_can_send()) {
+			mtbbus_send(data, 5);
+			gpio_pin_toggle(pin_led_yellow);
+		}
 		HAL_Delay(500);
 	}
 }
