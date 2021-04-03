@@ -27,9 +27,6 @@ C_SOURCES = \
 	$(STM32_SRC_PATH)/stm32f1xx_hal_uart.c \
 	$(STM32_SRC_PATH)/stm32f1xx_hal_pcd.c \
 	$(STM32_SRC_PATH)/stm32f1xx_hal_pcd_ex.c \
-	$(STM32_SRC_PATH)/stm32f1xx_ll_usb.c \
-	$(STM32_SRC_PATH)/stm32f1xx_ll_usart.c \
-	$(STM32_SRC_PATH)/stm32f1xx_ll_rcc.c \
 	lib/libusb_stm32/src/usbd_stm32f103_devfs.c \
 	lib/libusb_stm32/src/usbd_core.c \
 	$(wildcard src/*.c)
