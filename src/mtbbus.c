@@ -147,7 +147,8 @@ void _message_received() {
 	if ((mtbbus_received_data[xorpos] != (crc & 0xFF)) || (mtbbus_received_data[xorpos+1] != ((crc>>8) & 0xFF)))
 		return; // bad checksum
 
-	if (_inquiry_module == 0) {
+	if ((_inquiry_module == 0) || (mtbbus_received_data[1] != MTBBUS_CMD_MISO_ACK)) {
+		_inquiry_module = 0;
 		mtbbus_received_read = false;
 		mtbbus_received();
 	} else {

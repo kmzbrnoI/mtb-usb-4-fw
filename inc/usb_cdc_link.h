@@ -15,12 +15,27 @@
 #define CDC_NTF_SZ 0x08
 #define CDC_MTBUSB_BUF_SIZE 0x80
 
+typedef union {
+	uint8_t all[CDC_MTBUSB_BUF_SIZE];
+	struct {
+		uint8_t magic1 :8;
+		uint8_t magic2 :8;
+		uint8_t size :8;
+		uint8_t command_code :8;
+		uint8_t data[CDC_MTBUSB_BUF_SIZE-4]; // user fills only this item
+	} separate;
+} CdcTxData;
+
+extern CdcTxData cdc_tx;
+extern bool cdc_dtr_ready; // if computer reads data
+
 extern void (*cdc_main_received)(uint8_t command_code, uint8_t *data, size_t data_size);
 
 void cdc_init();
 bool cdc_is_debug_ep_enabled();
 bool cdc_main_can_send(void);
-bool cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize);
+bool cdc_main_send_copy(uint8_t command_code, uint8_t *data, size_t datasize);
+bool cdc_main_send_nocopy(uint8_t command_code, size_t datasize);
 
 void cdc_send_ack(void);
 void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module);

@@ -17,17 +17,19 @@ struct {
 struct {
 	uint32_t pos;
 	bool sending;
-	uint8_t fifo[CDC_MTBUSB_BUF_SIZE];
 	size_t size;
 } tx;
 
+CdcTxData cdc_tx;
 void (*cdc_main_received)(uint8_t command_code, uint8_t *data, size_t data_size);
+
+bool _cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize, bool copy);
 
 
 #define USB_LP_IRQ_HANDLER USB_LP_CAN1_RX0_IRQHandler
 const IRQn_Type usbLpIRQn = USB_LP_CAN1_RX0_IRQn;
 const unsigned usbLpIRQnPrio = 8;
-bool dtr_ready = false;
+bool cdc_dtr_ready = false;
 
 enum {
 	STRDESC_LANG,
@@ -360,7 +362,7 @@ static usbd_respond cdc_getdesc(
 static usbd_respond cdc_control_main(usbd_device* dev, usbd_ctlreq* req) {
 	switch (req->bRequest) {
 	case USB_CDC_SET_CONTROL_LINE_STATE: {
-		dtr_ready = req->wValue & 0x1;
+		cdc_dtr_ready = req->wValue & 0x1;
 		return usbd_ack;
 	}
 	case USB_CDC_SET_LINE_CODING: {
@@ -541,41 +543,50 @@ static void main_cdc_tx(usbd_device *dev, uint8_t event, uint8_t ep) {
 		return;
 	}
 
-	tx.pos += usbd_ep_write(dev, CDC_MAIN_TXD_EP, &tx.fifo[tx.pos],
+	tx.pos += usbd_ep_write(dev, CDC_MAIN_TXD_EP, &cdc_tx.all[tx.pos],
 	                        (tx.size-tx.pos < CDC_DATA_SZ) ? tx.size : CDC_DATA_SZ);
 }
 
 bool cdc_main_can_send(void) {
-	return !tx.sending && dtr_ready;
+	return !tx.sending && cdc_dtr_ready;
 }
 
-bool cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize) {
+bool _cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize, bool copy) {
 	if ((!cdc_main_can_send()) || (datasize > CDC_MTBUSB_BUF_SIZE-4))
 		return false;
 
-	tx.fifo[0] = 0x2A;
-	tx.fifo[1] = 0x42;
-	tx.fifo[2] = datasize+1;
-	tx.fifo[3] = command_code;
+	cdc_tx.separate.magic1 = 0x2A;
+	cdc_tx.separate.magic2 = 0x42;
+	cdc_tx.separate.size = datasize+1;
+	cdc_tx.separate.command_code = command_code;
 
-	memcpy(tx.fifo+4, data, datasize);
+	if (copy)
+		memcpy(cdc_tx.separate.data, data, datasize);
 	tx.size = datasize+4;
 	tx.pos = 0;
 	tx.sending = true;
 
-	tx.pos += usbd_ep_write(&udev, CDC_MAIN_TXD_EP, tx.fifo,
+	tx.pos += usbd_ep_write(&udev, CDC_MAIN_TXD_EP, cdc_tx.all,
 	                        (tx.size < CDC_DATA_SZ) ? tx.size : CDC_DATA_SZ);
 
 	return true;
 }
 
+bool cdc_main_send_copy(uint8_t command_code, uint8_t *data, size_t datasize) {
+	return _cdc_main_send(command_code, data, datasize, true);
+}
+
+bool cdc_main_send_nocopy(uint8_t command_code, size_t datasize) {
+	return _cdc_main_send(command_code, NULL, datasize, false);
+}
+
 void cdc_send_ack(void) {
 	if (cdc_main_can_send())
-		cdc_main_send(MTBUSB_CMD_MP_ACK, NULL, 0);
+		cdc_main_send_nocopy(MTBUSB_CMD_MP_ACK, 0);
 }
 
 void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module) {
 	uint8_t buf[3] = {error_code, command_code, module};
 	if (cdc_main_can_send())
-		cdc_main_send(MTBUSB_CMD_MP_ACK, buf, 3);
+		cdc_main_send_copy(MTBUSB_CMD_MP_ACK, buf, 3);
 }
