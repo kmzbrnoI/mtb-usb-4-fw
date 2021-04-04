@@ -109,7 +109,9 @@ bool mtbbus_init(void) {
 
 bool mtbbus_can_send(void) {
 	HAL_DMA_PollForTransfer(&_dma_tx_handle, HAL_DMA_FULL_TRANSFER, 0);
-	return (_dma_tx_handle.State == HAL_DMA_STATE_READY) && (mtbbus_rx_flags.all == 0);
+	HAL_DMA_PollForTransfer(&_dma_rx_handle, HAL_DMA_FULL_TRANSFER, 0);
+	return (_dma_tx_handle.State == HAL_DMA_STATE_READY) && (_dma_tx_handle.State == HAL_DMA_STATE_READY)
+	       && (mtbbus_rx_flags.all == 0) && (_response_counter == 0);
 }
 
 void DMA1_Channel2_IRQHandler() {
@@ -168,6 +170,7 @@ void _message_received() {
 }
 
 void _message_timeout() {
+	_receiving_first = false;
 	if (_inquiry_module == 0)
 		mtbbus_rx_flags.sep.timeout_pc = true;
 	else
