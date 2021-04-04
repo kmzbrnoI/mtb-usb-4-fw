@@ -8,8 +8,10 @@
 #define MTBBUS_IN_BUF_SIZE 128
 
 extern uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
-extern size_t mtbbus_received_addr;
+extern size_t mtbbus_sent_addr;
+extern size_t mtbbus_sent_command_code;
 extern bool mtbbus_received_read;
+extern bool mtbbus_received_no_response;
 
 bool mtbbus_init(void);
 bool mtbbus_can_send(void);

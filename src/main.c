@@ -3,6 +3,7 @@
 #include "i2c.h"
 #include "mtbbus.h"
 #include "gpio.h"
+#include "modules.h"
 
 UART_HandleTypeDef h_uart_debug;
 TIM_HandleTypeDef h_tim2;
@@ -27,6 +28,10 @@ int main(void) {
 				forward_mtbbus_received_to_usb();
 			else if (!cdc_dtr_ready) // computer does not listen → throw data away
 				mtbbus_received_read = true;
+		}
+		if ((mtbbus_received_no_response) && (cdc_main_can_send())) {
+			cdc_send_error(MTBUSB_ERROR_NO_RESPONSE, mtbbus_sent_command_code, mtbbus_sent_addr);
+			mtbbus_received_no_response = false;
 		}
 
 		mtbbus_module_inquiry(1);
@@ -221,7 +226,7 @@ void mtbbus_received() {
 }
 
 void forward_mtbbus_received_to_usb() {
-	cdc_tx.separate.data[0] = mtbbus_received_addr;
+	cdc_tx.separate.data[0] = mtbbus_sent_addr;
 	for (size_t i = 1; i < mtbbus_received_data[0]+1; i++)
 		cdc_tx.separate.data[i] = mtbbus_received_data[i] & 0xFF;
 	cdc_main_send_nocopy(MTBUSB_CMD_MP_FORWARD, mtbbus_received_data[0]+1);
