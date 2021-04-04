@@ -4,9 +4,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define MTBBUS_OUT_BUF_SIZE 128
+#define MTBBUS_IN_BUF_SIZE 128
+
+extern uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
+extern size_t mtbbus_received_addr;
+extern bool mtbbus_received_read;
+
 bool mtbbus_init(void);
 bool mtbbus_can_send(void);
 bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datalen);
+void mtbbus_received();
 
 void mtbbus_module_inquiry(uint8_t module_addr);
 

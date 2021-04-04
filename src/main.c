@@ -21,9 +21,8 @@ int main(void) {
 	static uint8_t data[5] = {0x01, 0x02, 0x03, 0x04, 0x05};
 
 	while (true) {
-		gpio_pin_toggle(pin_led_blue);
+		cdc_main_send(0x01, data, 5);
 		if (mtbbus_can_send()) {
-			cdc_main_send(0x01, data, 5);
 			mtbbus_module_inquiry(1);
 			gpio_pin_toggle(pin_led_yellow);
 		}
@@ -178,4 +177,9 @@ void SysTick_Handler(void) {
 void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 	gpio_pin_toggle(pin_led_red);
 	cdc_send_ack();
+}
+
+/* MTBbus --------------------------------------------------------------------*/
+
+void mtbbus_received(uint16_t *data, size_t datalen) {
 }
