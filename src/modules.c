@@ -23,10 +23,13 @@ void module_set_active(uint8_t addr, bool state) {
 		modules_active[addr/32] &= ~(1 << (addr%32));
 }
 
-void module_dec_attempts(uint8_t addr) {
+size_t module_dec_attempts(uint8_t addr) {
 	size_t value = module_get_attempts(addr);
-	if (value > 0)
+	if (value > 0) {
 		module_set_attempts(addr, value-1);
+		return value-1;
+	}
+	return 0;
 }
 
 void module_reset_attempts(uint8_t addr) {

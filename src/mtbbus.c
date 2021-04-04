@@ -27,16 +27,16 @@ DMA_Channel_TypeDef* const _uart_rx_dma_channel = DMA1_Channel3;
 uint16_t _out_buf[MTBBUS_OUT_BUF_SIZE];
 uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
 bool _receiving_first = false;
-bool mtbbus_received_read = true;
-bool mtbbus_received_no_response = false;
 volatile size_t _response_counter = 0;
 
 #define RESPONSE_COUNTER_FULL 4 // 200 us
 
 /* Higher-level data structures ----------------------------------------------*/
 
-size_t mtbbus_sent_addr = 0;
-size_t mtbbus_sent_command_code = 0;
+MtbBusRxFlags mtbbus_rx_flags = {.all=0};
+
+size_t mtbbus_addr = 0;
+size_t mtbbus_command_code = 0;
 size_t _inquiry_module = 0;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,7 +109,7 @@ bool mtbbus_init(void) {
 
 bool mtbbus_can_send(void) {
 	HAL_DMA_PollForTransfer(&_dma_tx_handle, HAL_DMA_FULL_TRANSFER, 0);
-	return (_dma_tx_handle.State == HAL_DMA_STATE_READY) && (mtbbus_received_read) && (!mtbbus_received_no_response);
+	return (_dma_tx_handle.State == HAL_DMA_STATE_READY) && (mtbbus_rx_flags.all == 0);
 }
 
 void DMA1_Channel2_IRQHandler() {
@@ -161,18 +161,17 @@ void _message_received() {
 
 	if ((_inquiry_module == 0) || (mtbbus_received_data[1] != MTBBUS_CMD_MISO_ACK)) {
 		_inquiry_module = 0;
-		mtbbus_received_read = false;
-		mtbbus_received();
+		mtbbus_rx_flags.sep.received = true;
 	} else {
-		_inquiry_response_ok(mtbbus_sent_addr);
+		_inquiry_response_ok(mtbbus_addr);
 	}
 }
 
 void _message_timeout() {
 	if (_inquiry_module == 0)
-		mtbbus_received_no_response = true;
+		mtbbus_rx_flags.sep.timeout_pc = true;
 	else
-		_inquiry_response_timeout(mtbbus_sent_addr);
+		_inquiry_response_timeout(mtbbus_addr);
 }
 
 void EXTI15_10_IRQHandler(void) {
@@ -208,8 +207,8 @@ bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datal
 	if (command_code != MTBBUS_CMD_MOSI_MODULE_INQUIRY)
 		_inquiry_module = 0;
 
-	mtbbus_sent_addr = addr;
-	mtbbus_sent_command_code = command_code;
+	mtbbus_addr = addr;
+	mtbbus_command_code = command_code;
 
 	_out_buf[0] = 0x0100 + addr;
 	_out_buf[1] = datalen+1;
@@ -237,8 +236,19 @@ void mtbbus_module_inquiry(uint8_t module_addr) {
 
 void _inquiry_response_ok(size_t addr) {
 	_inquiry_module = 0;
+	if (!module_active(addr)) {
+		mtbbus_rx_flags.sep.discovered = true;
+		module_set_active(addr, true);
+		module_reset_attempts(addr);
+	}
 }
 
 void _inquiry_response_timeout(size_t addr) {
 	_inquiry_module = 0;
+
+	if (module_active(addr)) {
+		mtbbus_rx_flags.sep.timeout_inquiry = true;
+		if (module_dec_attempts(addr) == 0)
+			module_set_active(addr, false);
+	}
 }

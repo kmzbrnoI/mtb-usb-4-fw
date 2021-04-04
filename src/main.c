@@ -16,6 +16,7 @@ static bool clock_init(void);
 static bool debug_uart_init(void);
 void usb_received(uint8_t command_code, uint8_t *data, size_t data_size);
 void forward_mtbbus_received_to_usb();
+static inline void mtbbus_poll_rx_flags(void);
 
 /* Private code --------------------------------------------------------------*/
 
@@ -23,16 +24,7 @@ int main(void) {
 	init();
 
 	while (true) {
-		if (!mtbbus_received_read) {
-			if (cdc_main_can_send())
-				forward_mtbbus_received_to_usb();
-			else if (!cdc_dtr_ready) // computer does not listen → throw data away
-				mtbbus_received_read = true;
-		}
-		if ((mtbbus_received_no_response) && (cdc_main_can_send())) {
-			cdc_send_error(MTBUSB_ERROR_NO_RESPONSE, mtbbus_sent_command_code, mtbbus_sent_addr);
-			mtbbus_received_no_response = false;
-		}
+		mtbbus_poll_rx_flags();
 
 		mtbbus_module_inquiry(1);
 
@@ -222,13 +214,41 @@ void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 
 /* MTBbus --------------------------------------------------------------------*/
 
-void mtbbus_received() {
-}
-
 void forward_mtbbus_received_to_usb() {
-	cdc_tx.separate.data[0] = mtbbus_sent_addr;
+	cdc_tx.separate.data[0] = mtbbus_addr;
 	for (size_t i = 1; i < mtbbus_received_data[0]+1; i++)
 		cdc_tx.separate.data[i] = mtbbus_received_data[i] & 0xFF;
 	cdc_main_send_nocopy(MTBUSB_CMD_MP_FORWARD, mtbbus_received_data[0]+1);
-	mtbbus_received_read = true;
+}
+
+static inline void mtbbus_poll_rx_flags(void) {
+	if (!cdc_dtr_ready)
+		mtbbus_rx_flags.all = 0;  // computer does not listen → ignore all events from MTBbus
+	if (!cdc_main_can_send())
+		return; // USB busy → wait for next poll
+
+	if (mtbbus_rx_flags.sep.received) {
+		forward_mtbbus_received_to_usb();
+		mtbbus_rx_flags.sep.received = false;
+	}
+
+	if (mtbbus_rx_flags.sep.timeout_pc) {
+		cdc_send_error(MTBUSB_ERROR_NO_RESPONSE, mtbbus_command_code, mtbbus_addr);
+		mtbbus_rx_flags.sep.timeout_pc = false;
+	}
+
+	if (mtbbus_rx_flags.sep.timeout_inquiry) {
+		gpio_pin_toggle(pin_led_red);
+		cdc_tx.separate.data[0] = mtbbus_addr;
+		cdc_tx.separate.data[1] = module_get_attempts(mtbbus_addr); // TODO: add to protocol
+		cdc_main_send_nocopy(MTBUSB_CMD_MP_MODULE_FAILED, 2);
+		mtbbus_rx_flags.sep.timeout_inquiry = false;
+	}
+
+	if (mtbbus_rx_flags.sep.discovered) {
+		gpio_pin_toggle(pin_led_green);
+		cdc_tx.separate.data[0] = mtbbus_addr;
+		cdc_main_send_nocopy(MTBUSB_CMD_MP_NEW_MODULE, 1);
+		mtbbus_rx_flags.sep.discovered = false;
+	}
 }
