@@ -566,12 +566,6 @@ bool cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize) {
 	tx.pos += usbd_ep_write(&udev, CDC_MAIN_TXD_EP, tx.fifo,
 	                        (tx.size < CDC_DATA_SZ) ? tx.size : CDC_DATA_SZ);
 
-	if (tx.pos == 0) {
-		// PC does not read data
-		tx.sending = false;
-		return false;
-	}
-
 	return true;
 }
 

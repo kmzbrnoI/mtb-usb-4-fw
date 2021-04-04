@@ -23,7 +23,8 @@ int main(void) {
 	while (true) {
 		gpio_pin_toggle(pin_led_blue);
 		if (mtbbus_can_send()) {
-			mtbbus_send(data, 5);
+			cdc_main_send(0x01, data, 5);
+			mtbbus_module_inquiry(1);
 			gpio_pin_toggle(pin_led_yellow);
 		}
 		HAL_Delay(500);

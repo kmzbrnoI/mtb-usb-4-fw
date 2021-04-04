@@ -13,7 +13,14 @@ Debug:
 
 ```bash
 $ openocd
-$ gdb build/mtb-usb-4.elf
+$ arm-none-eabi-gdb build/mtb-usb-4.elf
 (gdb) target extended-remote :3333
 (gdb) b main
+```
+
+Read serial in linux:
+
+```bash
+$ stty -F /dev/ttyACM0 raw
+$ xxd /dev/ttyACM0
 ```
