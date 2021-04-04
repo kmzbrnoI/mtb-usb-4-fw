@@ -57,6 +57,7 @@ void init(void) {
 	cdc_main_received = usb_received;
 
 	debug_uart_init();
+	modules_init();
 
 	__HAL_AFIO_REMAP_SWJ_NOJTAG();
 

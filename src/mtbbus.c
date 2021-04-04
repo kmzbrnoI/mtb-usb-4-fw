@@ -166,12 +166,10 @@ void _message_received() {
 }
 
 void _message_timeout() {
-	gpio_pin_toggle(pin_led_red);
 }
 
 void EXTI15_10_IRQHandler(void) {
 	if (__HAL_GPIO_EXTI_GET_FLAG(pin_usart_mtb_rx.pin)) {
-		gpio_pin_toggle(pin_debug_a);
 		_response_counter = 0;
 		_rx_interrupt_disable();
 		HAL_GPIO_EXTI_IRQHandler(pin_usart_mtb_rx.pin);
@@ -189,10 +187,8 @@ static inline void _rx_interrupt_disable() {
 void mtbbus_update_50us(void) {
 	if (_response_counter > 0) {
 		_response_counter--;
-		if (_response_counter == 0) {
+		if (_response_counter == 0)
 			_message_timeout();
-			gpio_pin_toggle(pin_debug_b);
-		}
 	}
 }
 
