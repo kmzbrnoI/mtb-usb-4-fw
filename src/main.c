@@ -5,6 +5,7 @@
 #include "gpio.h"
 
 UART_HandleTypeDef h_uart_debug;
+TIM_HandleTypeDef h_tim2;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -103,6 +104,31 @@ bool clock_init(void) {
 
 	__HAL_RCC_AFIO_CLK_ENABLE();
 	__HAL_RCC_PWR_CLK_ENABLE();
+	__HAL_RCC_TIM2_CLK_ENABLE();
+
+	// Timer 1 @ 50 us (MTBbus timeout)
+	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+	TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+	h_tim2.Instance = TIM2;
+	h_tim2.Init.Prescaler = 32;
+	h_tim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+	h_tim2.Init.Period = 73;
+	h_tim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	h_tim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	if (HAL_TIM_Base_Init(&h_tim2) != HAL_OK)
+		return false;
+	HAL_TIM_Base_Start_IT(&h_tim2);
+
+	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+	if (HAL_TIM_ConfigClockSource(&h_tim2, &sClockSourceConfig) != HAL_OK)
+		return false;
+	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+	if (HAL_TIMEx_MasterConfigSynchronization(&h_tim2, &sMasterConfig) != HAL_OK)
+		return false;
+
+	HAL_NVIC_EnableIRQ(TIM2_IRQn);
 
 	return true;
 }
@@ -177,6 +203,11 @@ void SysTick_Handler(void) {
 	HAL_IncTick();
 }
 
+void TIM2_IRQHandler(void) {
+	mtbbus_update_50us();
+	HAL_TIM_IRQHandler(&h_tim2);
+}
+
 /* USB -----------------------------------------------------------------------*/
 
 void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
@@ -189,8 +220,6 @@ void mtbbus_received() {
 }
 
 void forward_mtbbus_received_to_usb() {
-	gpio_pin_toggle(pin_led_red);
-
 	cdc_tx.separate.data[0] = mtbbus_received_addr;
 	for (size_t i = 1; i < mtbbus_received_data[0]+1; i++)
 		cdc_tx.separate.data[i] = mtbbus_received_data[i] & 0xFF;

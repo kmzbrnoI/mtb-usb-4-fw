@@ -27,6 +27,9 @@ uint16_t _out_buf[MTBBUS_OUT_BUF_SIZE];
 uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
 bool _receiving_first = false;
 bool mtbbus_received_read = true;
+volatile size_t _response_counter = 0;
+
+#define RESPONSE_COUNTER_FULL 4 // 200 us
 
 /* Higher-level data structures ----------------------------------------------*/
 
@@ -38,6 +41,9 @@ size_t _sent_command_code = 0;
 
 void _inquiry_response_ok(size_t addr);
 void _message_received();
+void _message_timeout();
+static inline void _rx_interrupt_enable();
+static inline void _rx_interrupt_disable();
 
 /* Private code --------------------------------------------------------------*/
 
@@ -93,6 +99,8 @@ bool mtbbus_init(void) {
 	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_AF_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, false);
 	gpio_pin_init(pin_usart_mtb_dir, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW, false);
 
+	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 	return true;
 }
 
@@ -118,6 +126,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 		gpio_pin_write(pin_usart_mtb_dir, false);
 
 		// read just a single byte in DMA mode (first byte contains number of bytes following)
+		_response_counter = RESPONSE_COUNTER_FULL;
 		_receiving_first = true;
 		HAL_UART_DMAStop(&_h_uart_mtbbus);
 		HAL_UART_Receive_DMA(&_h_uart_mtbbus, (uint8_t*)mtbbus_received_data, 1);
@@ -156,6 +165,37 @@ void _message_received() {
 	}
 }
 
+void _message_timeout() {
+	gpio_pin_toggle(pin_led_red);
+}
+
+void EXTI15_10_IRQHandler(void) {
+	if (__HAL_GPIO_EXTI_GET_FLAG(pin_usart_mtb_rx.pin)) {
+		gpio_pin_toggle(pin_debug_a);
+		_response_counter = 0;
+		_rx_interrupt_disable();
+		HAL_GPIO_EXTI_IRQHandler(pin_usart_mtb_rx.pin);
+	}
+}
+
+static inline void _rx_interrupt_enable() {
+	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_IT_FALLING, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, true);
+}
+
+static inline void _rx_interrupt_disable() {
+	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_AF_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, true);
+}
+
+void mtbbus_update_50us(void) {
+	if (_response_counter > 0) {
+		_response_counter--;
+		if (_response_counter == 0) {
+			_message_timeout();
+			gpio_pin_toggle(pin_debug_b);
+		}
+	}
+}
+
 /* Higher-level MTBbus functions ---------------------------------------------*/
 
 bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datalen) {
@@ -181,6 +221,7 @@ bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datal
 	total_len += 2;
 
 	gpio_pin_write(pin_usart_mtb_dir, true);
+	_rx_interrupt_enable();
 	HAL_UART_Transmit_DMA(&_h_uart_mtbbus, (uint8_t*)_out_buf, total_len);
 
 	return true;

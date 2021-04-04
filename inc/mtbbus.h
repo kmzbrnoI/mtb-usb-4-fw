@@ -14,7 +14,8 @@ extern bool mtbbus_received_read;
 bool mtbbus_init(void);
 bool mtbbus_can_send(void);
 bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datalen);
-void mtbbus_received();
+void mtbbus_received(void);
+void mtbbus_update_50us(void);
 
 void mtbbus_module_inquiry(uint8_t module_addr);
 
