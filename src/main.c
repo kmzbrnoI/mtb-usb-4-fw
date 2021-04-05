@@ -27,6 +27,7 @@ typedef union {
 } DeviceUsbTxReq;
 
 DeviceUsbTxReq device_usb_tx_req;
+uint32_t _speed_change_req = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -40,6 +41,7 @@ static inline void mtbbus_poll_rx_flags(void);
 static inline void ring_usb_to_mtbbus_poll(void);
 static inline bool ring_usb_to_mtbbus_message_ready(void);
 static inline void poll_usb_tx_flags(void);
+static inline void poll_speed_change(void);
 
 /* Private code --------------------------------------------------------------*/
 
@@ -50,6 +52,7 @@ int main(void) {
 		mtbbus_poll_rx_flags();
 		ring_usb_to_mtbbus_poll();
 		poll_usb_tx_flags();
+		poll_speed_change();
 
 		//HAL_Delay(100);
 		gpio_pin_toggle(pin_led_yellow);
@@ -68,7 +71,7 @@ void init(void) {
 	gpio_pin_write(pin_led_green, true);
 	gpio_pin_write(pin_led_blue, true);
 
-	if (!mtbbus_init())
+	if (!mtbbus_init(38400))
 		error_handler();
 	if (!i2c_init())
 		error_handler();
@@ -255,7 +258,7 @@ void TIM2_IRQHandler(void) {
 
 void TIM3_IRQHandler(void) {
 	// Timer 3 @ 5 ms (200 Hz)
-	if (mtbbus_can_send() && (!ring_usb_to_mtbbus_message_ready()))
+	if (mtbbus_can_send() && (!ring_usb_to_mtbbus_message_ready()) && (_speed_change_req == 0))
 		mtbbus_modules_inquiry();
 
 	HAL_TIM_IRQHandler(&h_tim3);
@@ -276,11 +279,18 @@ void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 	} else if (command_code == MTBUSB_CMD_PM_INFO_REQ) {
 		device_usb_tx_req.sep.info = true;
 
-	} else if (command_code == MTBUSB_CMD_PM_CHANGE_SPEED) {
+	} else if ((command_code == MTBUSB_CMD_PM_CHANGE_SPEED) && (data_size >= 1)) {
+		uint8_t speed = data[0];
+		if (speed == 1)
+			_speed_change_req = 57600;
+		else if (speed == 2)
+			_speed_change_req = 115200;
+		else
+			_speed_change_req = 38400;
 
+		device_usb_tx_req.sep.ack = true;
 
 	} else if (command_code == MTBUSB_CMD_PM_ACTIVE_MODULES_REQ) {
-		gpio_pin_toggle(pin_led_red);
 		device_usb_tx_req.sep.active_modules = true;
 	}
 }
@@ -365,4 +375,11 @@ static inline void ring_usb_to_mtbbus_poll(void) {
 static inline bool ring_usb_to_mtbbus_message_ready(void) {
 	return (!ring_empty(&ring_usb_to_mtbbus)) &&
 	       (ring_length(&ring_usb_to_mtbbus) >= ring_get_byte_begin(&ring_usb_to_mtbbus, 0));
+}
+
+static inline void poll_speed_change(void) {
+	if ((_speed_change_req > 0) && (mtbbus_can_send())) {
+		mtbbus_change_speed(_speed_change_req);
+		_speed_change_req = 0;
+	}
 }

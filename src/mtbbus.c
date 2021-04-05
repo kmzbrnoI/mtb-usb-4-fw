@@ -59,12 +59,12 @@ static inline void _mtbbus_send_buf(size_t total_len);
 
 /* Private code --------------------------------------------------------------*/
 
-bool mtbbus_init(void) {
+bool mtbbus_init(uint32_t speed) {
 	__HAL_RCC_USART3_CLK_ENABLE();
 	__HAL_RCC_DMA1_CLK_ENABLE();
 
 	_h_uart_mtbbus.Instance = _uart;
-	_h_uart_mtbbus.Init.BaudRate = 38400;
+	_h_uart_mtbbus.Init.BaudRate = speed;
 	_h_uart_mtbbus.Init.WordLength = UART_WORDLENGTH_9B;
 	_h_uart_mtbbus.Init.StopBits = UART_STOPBITS_1;
 	_h_uart_mtbbus.Init.Parity = UART_PARITY_NONE;
@@ -110,6 +110,12 @@ bool mtbbus_init(void) {
 	gpio_pin_init(pin_usart_mtb_dir, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW, false);
 
 	return true;
+}
+
+bool mtbbus_change_speed(uint32_t speed) {
+	HAL_UART_DeInit(&_h_uart_mtbbus);
+	_h_uart_mtbbus.Init.BaudRate = speed;
+	return (HAL_UART_Init(&_h_uart_mtbbus) == HAL_OK);
 }
 
 bool mtbbus_can_send(void) {

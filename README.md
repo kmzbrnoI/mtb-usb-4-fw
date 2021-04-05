@@ -25,8 +25,9 @@ $ stty -F /dev/ttyACM0 raw
 $ xxd /dev/ttyACM0
 ```
 
-Send to serial (module 1 info request):
+Send to serial:
 
 ```bash
-$ echo -ne '\x2A\x42\x03\x10\x01\x02' > /dev/ttyACM0
+$ echo -ne '\x2A\x42\x03\x10\x01\x02' > /dev/ttyACM0 # module 1 info request
+$ echo -ne '\x2A\x42\x01\x20' > /dev/ttyACM0 # active modules request
 ```
