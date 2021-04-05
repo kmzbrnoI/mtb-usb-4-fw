@@ -226,6 +226,38 @@ bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datal
 	return true;
 }
 
+bool mtbbus_send_from_ring(ring_buffer* buf) {
+	if ((!mtbbus_can_send()) || (ring_length(buf) < 3))
+		return false;
+
+	uint8_t addr = ring_get_byte_begin(buf, 1);
+	uint8_t command_code = ring_get_byte_begin(buf, 2);
+
+	if (command_code != MTBBUS_CMD_MOSI_MODULE_INQUIRY)
+		_inquiry_module = 0;
+
+	mtbbus_addr = addr;
+	mtbbus_command_code = command_code;
+
+	uint8_t datalen = ring_get_byte_begin(buf, 0)-3;
+	_out_buf[0] = 0x0100 + addr; // device address
+	_out_buf[1] = datalen+1;
+	_out_buf[2] = command_code;
+	for (size_t i = 0; i < datalen; i++)
+		_out_buf[3+i] = ring_get_byte_begin(buf, 3+i);
+	size_t total_len = datalen+3;
+
+	uint16_t crc = crc16modbus_bytes(0, _out_buf, total_len);
+	_out_buf[total_len] = crc & 0xFF;
+	_out_buf[total_len+1] = (crc >> 8) & 0xFF;
+	total_len += 2;
+
+	gpio_pin_write(pin_usart_mtb_dir, true);
+	HAL_UART_Transmit_DMA(&_h_uart_mtbbus, (uint8_t*)_out_buf, total_len);
+
+	return true;
+}
+
 void mtbbus_module_inquiry(uint8_t module_addr) {
 	_inquiry_module = module_addr;
 	mtbbus_send(module_addr, MTBBUS_CMD_MOSI_MODULE_INQUIRY, NULL, 0);

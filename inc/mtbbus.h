@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "ring_buffer.h"
 
 #define MTBBUS_OUT_BUF_SIZE 128
 #define MTBBUS_IN_BUF_SIZE 128
@@ -36,6 +37,7 @@ extern size_t mtbbus_command_code;
 bool mtbbus_init(void);
 bool mtbbus_can_send(void);
 bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datalen);
+bool mtbbus_send_from_ring(ring_buffer* buf);
 void mtbbus_update_50us(void);
 
 void mtbbus_module_inquiry(uint8_t module_addr);

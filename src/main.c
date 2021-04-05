@@ -4,10 +4,17 @@
 #include "mtbbus.h"
 #include "gpio.h"
 #include "modules.h"
+#include "ring_buffer.h"
+
+/* Private variables ---------------------------------------------------------*/
 
 UART_HandleTypeDef h_uart_debug;
 TIM_HandleTypeDef h_tim2;
 TIM_HandleTypeDef h_tim3;
+
+#define RING_USB_TO_MTBBUS_SIZE 256
+uint8_t _usb_to_mtbbus_data[RING_USB_TO_MTBBUS_SIZE];
+ring_buffer ring_usb_to_mtbbus;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -18,6 +25,8 @@ static bool debug_uart_init(void);
 void usb_received(uint8_t command_code, uint8_t *data, size_t data_size);
 void forward_mtbbus_received_to_usb();
 static inline void mtbbus_poll_rx_flags(void);
+static inline void ring_usb_to_mtbbus_poll(void);
+static inline bool ring_usb_to_mtbbus_message_ready(void);
 
 /* Private code --------------------------------------------------------------*/
 
@@ -26,6 +35,7 @@ int main(void) {
 
 	while (true) {
 		mtbbus_poll_rx_flags();
+		ring_usb_to_mtbbus_poll();
 
 		HAL_Delay(100);
 		gpio_pin_toggle(pin_led_yellow);
@@ -54,6 +64,7 @@ void init(void) {
 
 	debug_uart_init();
 	modules_init();
+	ring_init(&ring_usb_to_mtbbus, _usb_to_mtbbus_data, RING_USB_TO_MTBBUS_SIZE);
 
 	__HAL_AFIO_REMAP_SWJ_NOJTAG();
 
@@ -230,7 +241,7 @@ void TIM2_IRQHandler(void) {
 
 void TIM3_IRQHandler(void) {
 	// Timer 3 @ 5 ms (200 Hz)
-	if (mtbbus_can_send())
+	if (mtbbus_can_send() && (!ring_usb_to_mtbbus_message_ready()))
 		mtbbus_modules_inquiry();
 
 	HAL_TIM_IRQHandler(&h_tim3);
@@ -239,7 +250,20 @@ void TIM3_IRQHandler(void) {
 /* USB -----------------------------------------------------------------------*/
 
 void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
-	//cdc_send_ack();
+	gpio_pin_toggle(pin_led_green);
+
+	if ((command_code == MTBUSB_CMD_PM_FORWARD) && (data_size >= 2)) {
+		bool ok = true;
+		ok &= ring_add_byte(&ring_usb_to_mtbbus, data_size+1);
+		ok &= ring_add_bytes(&ring_usb_to_mtbbus, data, data_size);
+
+		if (!ok) {
+			// TODO
+		}
+	} else if (command_code == MTBUSB_CMD_PM_INFO_REQ) {
+	} else if (command_code == MTBUSB_CMD_PM_CHANGE_SPEED) {
+	} else if (command_code == MTBUSB_CMD_PM_ACTIVE_MODULES_REQ) {
+	}
 }
 
 /* MTBbus --------------------------------------------------------------------*/
@@ -279,4 +303,18 @@ static inline void mtbbus_poll_rx_flags(void) {
 		cdc_main_send_nocopy(MTBUSB_CMD_MP_NEW_MODULE, 1);
 		mtbbus_rx_flags.sep.discovered = false;
 	}
+}
+
+static inline void ring_usb_to_mtbbus_poll(void) {
+	if ((mtbbus_can_send()) && ring_usb_to_mtbbus_message_ready()) {
+		if (mtbbus_send_from_ring(&ring_usb_to_mtbbus)) {
+			gpio_pin_toggle(pin_led_blue);
+			ring_move_begin(&ring_usb_to_mtbbus, ring_get_byte_begin(&ring_usb_to_mtbbus, 0));
+		}
+	}
+}
+
+static inline bool ring_usb_to_mtbbus_message_ready(void) {
+	return (!ring_empty(&ring_usb_to_mtbbus)) &&
+	       (ring_length(&ring_usb_to_mtbbus) >= ring_get_byte_begin(&ring_usb_to_mtbbus, 0));
 }
