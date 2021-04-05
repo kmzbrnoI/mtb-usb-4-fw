@@ -7,6 +7,7 @@
 
 UART_HandleTypeDef h_uart_debug;
 TIM_HandleTypeDef h_tim2;
+TIM_HandleTypeDef h_tim3;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -103,8 +104,9 @@ bool clock_init(void) {
 	__HAL_RCC_AFIO_CLK_ENABLE();
 	__HAL_RCC_PWR_CLK_ENABLE();
 	__HAL_RCC_TIM2_CLK_ENABLE();
+	__HAL_RCC_TIM3_CLK_ENABLE();
 
-	// Timer 1 @ 50 us (MTBbus timeout)
+	// Timer 2 @ 50 us (MTBbus timeout)
 	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
 	TIM_MasterConfigTypeDef sMasterConfig = {0};
 
@@ -127,6 +129,27 @@ bool clock_init(void) {
 		return false;
 
 	HAL_NVIC_EnableIRQ(TIM2_IRQn);
+
+	// Timer 3 @ 5 ms
+	h_tim3.Instance = TIM3;
+	h_tim3.Init.Prescaler = 128;
+	h_tim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+	h_tim3.Init.Period = 1859;
+	h_tim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	h_tim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	if (HAL_TIM_Base_Init(&h_tim3) != HAL_OK)
+		return false;
+	HAL_TIM_Base_Start_IT(&h_tim3);
+
+	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+	if (HAL_TIM_ConfigClockSource(&h_tim3, &sClockSourceConfig) != HAL_OK)
+		return false;
+	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+	if (HAL_TIMEx_MasterConfigSynchronization(&h_tim3, &sMasterConfig) != HAL_OK)
+		return false;
+
+	HAL_NVIC_EnableIRQ(TIM3_IRQn);
 
 	return true;
 }
@@ -202,8 +225,15 @@ void SysTick_Handler(void) {
 }
 
 void TIM2_IRQHandler(void) {
+	// Timer 2 @ 50 us (20 kHz)
 	mtbbus_update_50us();
 	HAL_TIM_IRQHandler(&h_tim2);
+}
+
+void TIM3_IRQHandler(void) {
+	// Timer 3 @ 5 ms (1 kHz)
+	gpio_pin_toggle(pin_debug_a);
+	HAL_TIM_IRQHandler(&h_tim3);
 }
 
 /* USB -----------------------------------------------------------------------*/
@@ -238,7 +268,6 @@ static inline void mtbbus_poll_rx_flags(void) {
 	}
 
 	if (mtbbus_rx_flags.sep.timeout_inquiry) {
-		gpio_pin_toggle(pin_led_red);
 		cdc_tx.separate.data[0] = mtbbus_addr;
 		cdc_tx.separate.data[1] = module_get_attempts(mtbbus_addr); // TODO: add to protocol
 		cdc_main_send_nocopy(MTBUSB_CMD_MP_MODULE_FAILED, 2);
@@ -246,7 +275,6 @@ static inline void mtbbus_poll_rx_flags(void) {
 	}
 
 	if (mtbbus_rx_flags.sep.discovered) {
-		gpio_pin_toggle(pin_led_green);
 		cdc_tx.separate.data[0] = mtbbus_addr;
 		cdc_main_send_nocopy(MTBUSB_CMD_MP_NEW_MODULE, 1);
 		mtbbus_rx_flags.sep.discovered = false;
