@@ -39,6 +39,7 @@ bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datal
 void mtbbus_update_50us(void);
 
 void mtbbus_module_inquiry(uint8_t module_addr);
+void mtbbus_modules_inquiry(void);
 
 #define MTBBUS_CMD_MOSI_MODULE_INQUIRY 0x01
 

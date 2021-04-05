@@ -37,7 +37,7 @@ void module_reset_attempts(uint8_t addr) {
 }
 
 size_t module_get_attempts(uint8_t addr) {
-	return (modules_timeout_counters[addr/8] >> addr%8) & 0xF;
+	return (modules_timeout_counters[addr/8] >> (4*(addr%8))) & 0xF;
 }
 
 void module_set_attempts(uint8_t addr, size_t value) {
@@ -45,6 +45,23 @@ void module_set_attempts(uint8_t addr, size_t value) {
 		value = 0xF;
 
 	size_t i = addr/8;
-	uint32_t mask = ~(0xF << (addr%8));
-	modules_timeout_counters[i] = (modules_timeout_counters[i] & mask) | (value << (addr%8));
+	uint32_t mask = ~(0xF << (4*(addr%8)));
+	modules_timeout_counters[i] = (modules_timeout_counters[i] & mask) | (value << (4*(addr%8)));
+}
+
+uint8_t module_next_active_addr(uint8_t addr) {
+	uint32_t module_active = modules_active[addr/32];
+	module_active >>= addr % 32;
+
+	do {
+		addr++;
+		if (addr == 0)
+			return 0;
+		if ((addr%32) > 0)
+			module_active >>= 1;
+		else
+			module_active = modules_active[addr/32];
+	} while ((module_active&1) == 0);
+
+	return addr;
 }

@@ -39,6 +39,12 @@ size_t mtbbus_addr = 0;
 size_t mtbbus_command_code = 0;
 size_t _inquiry_module = 0;
 
+uint8_t _inquiry_exist_module = 0;
+uint8_t _inquiry_nonexist_module = 0;
+size_t _inquiry_nonexist_counter = 0;
+
+#define INQUIRY_NONEXIST_PER_CYCLE 10
+
 /* Private function prototypes -----------------------------------------------*/
 
 void _inquiry_response_ok(size_t addr);
@@ -170,6 +176,7 @@ void _message_received() {
 }
 
 void _message_timeout() {
+	HAL_UART_DMAStop(&_h_uart_mtbbus);
 	_receiving_first = false;
 	if (_inquiry_module == 0)
 		mtbbus_rx_flags.sep.timeout_pc = true;
@@ -253,5 +260,36 @@ void _inquiry_response_timeout(size_t addr) {
 		mtbbus_rx_flags.sep.timeout_inquiry = true;
 		if (module_dec_attempts(addr) == 0)
 			module_set_active(addr, false);
+	}
+}
+
+/* Modules polling -----------------------------------------------------------*/
+
+void mtbbus_modules_inquiry(void) {
+	// increment counters
+	if (_inquiry_exist_module == 0) {
+		_inquiry_nonexist_module++;
+		if (_inquiry_nonexist_module == 0)
+			_inquiry_nonexist_module = 1;
+		_inquiry_nonexist_counter++;
+
+		if (_inquiry_nonexist_counter >= INQUIRY_NONEXIST_PER_CYCLE) {
+			// move to next cycle of active modules requesting
+			// if no module exists, continue with reqiesting nonexistent
+			_inquiry_nonexist_counter = 0;
+			_inquiry_exist_module = module_next_active_addr(0);
+		}
+	} else {
+		_inquiry_exist_module = module_next_active_addr(_inquiry_exist_module);
+		_inquiry_nonexist_counter = 0;
+	}
+
+	// inquiry module
+	if (_inquiry_exist_module == 0) {
+		mtbbus_module_inquiry(_inquiry_nonexist_module);
+		// inquiry up to INQUIRY_NONEXIST_PER_CYCLE nonexisting modules
+	} else {
+		// inquiry next existing module
+		mtbbus_module_inquiry(_inquiry_exist_module);
 	}
 }

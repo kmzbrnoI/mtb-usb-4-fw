@@ -27,9 +27,7 @@ int main(void) {
 	while (true) {
 		mtbbus_poll_rx_flags();
 
-		mtbbus_module_inquiry(1);
-
-		HAL_Delay(500);
+		HAL_Delay(100);
 		gpio_pin_toggle(pin_led_yellow);
 	}
 }
@@ -231,15 +229,17 @@ void TIM2_IRQHandler(void) {
 }
 
 void TIM3_IRQHandler(void) {
-	// Timer 3 @ 5 ms (1 kHz)
-	gpio_pin_toggle(pin_debug_a);
+	// Timer 3 @ 5 ms (200 Hz)
+	if (mtbbus_can_send())
+		mtbbus_modules_inquiry();
+
 	HAL_TIM_IRQHandler(&h_tim3);
 }
 
 /* USB -----------------------------------------------------------------------*/
 
 void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
-	cdc_send_ack();
+	//cdc_send_ack();
 }
 
 /* MTBbus --------------------------------------------------------------------*/
