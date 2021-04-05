@@ -49,10 +49,10 @@ size_t _inquiry_nonexist_counter = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 
-void _inquiry_response_ok(size_t addr);
-void _inquiry_response_timeout(size_t addr);
-void _message_received();
-void _message_timeout();
+static inline void _inquiry_response_ok(size_t addr);
+static inline void _inquiry_response_timeout(size_t addr);
+static inline void _message_received();
+static inline void _message_timeout();
 static inline void _rx_interrupt_enable();
 static inline void _rx_interrupt_disable();
 static inline void _mtbbus_send_buf(size_t total_len);
@@ -156,7 +156,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	}
 }
 
-void _message_received() {
+static inline void _message_received() {
 	// TODO: maybe it is better/faster to calc xor as data arrives (receive data per 1 byte)
 	// call to crc16modbus_bytes can take time; this function is called from interrupt → should be fast
 	uint16_t crc = crc16modbus_bytes(0, mtbbus_received_data, mtbbus_received_data[0]+1);
@@ -274,7 +274,7 @@ void mtbbus_module_inquiry(uint8_t module_addr) {
 	mtbbus_send(module_addr, MTBBUS_CMD_MOSI_MODULE_INQUIRY, NULL, 0);
 }
 
-void _inquiry_response_ok(size_t addr) {
+static inline void _inquiry_response_ok(size_t addr) {
 	_inquiry_module = 0;
 	module_reset_attempts(addr);
 	if (!module_active(addr)) {
@@ -283,7 +283,7 @@ void _inquiry_response_ok(size_t addr) {
 	}
 }
 
-void _inquiry_response_timeout(size_t addr) {
+static inline void _inquiry_response_timeout(size_t addr) {
 	_inquiry_module = 0;
 
 	if (module_active(addr)) {
