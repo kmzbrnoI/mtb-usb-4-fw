@@ -4,6 +4,9 @@
 
 #define MODULE_ATTEMPTS_MAX 4
 
+extern uint32_t modules_active[8];
+extern uint32_t modules_timeout_counters[32];
+
 void modules_init(void);
 bool module_active(uint8_t addr);
 void module_set_active(uint8_t addr, bool state);

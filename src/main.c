@@ -5,6 +5,7 @@
 #include "gpio.h"
 #include "modules.h"
 #include "ring_buffer.h"
+#include "common.h"
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -15,6 +16,17 @@ TIM_HandleTypeDef h_tim3;
 #define RING_USB_TO_MTBBUS_SIZE 256
 uint8_t _usb_to_mtbbus_data[RING_USB_TO_MTBBUS_SIZE];
 ring_buffer ring_usb_to_mtbbus;
+
+typedef union {
+	size_t all;
+	struct {
+		bool ack :1;
+		bool info: 1;
+		bool active_modules :1;
+	} sep;
+} DeviceUsbTxReq;
+
+DeviceUsbTxReq device_usb_tx_req;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -27,6 +39,7 @@ void forward_mtbbus_received_to_usb();
 static inline void mtbbus_poll_rx_flags(void);
 static inline void ring_usb_to_mtbbus_poll(void);
 static inline bool ring_usb_to_mtbbus_message_ready(void);
+static inline void poll_usb_tx_flags(void);
 
 /* Private code --------------------------------------------------------------*/
 
@@ -36,6 +49,7 @@ int main(void) {
 	while (true) {
 		mtbbus_poll_rx_flags();
 		ring_usb_to_mtbbus_poll();
+		poll_usb_tx_flags();
 
 		//HAL_Delay(100);
 		gpio_pin_toggle(pin_led_yellow);
@@ -258,9 +272,46 @@ void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 
 		ring_add_byte(&ring_usb_to_mtbbus, data_size+1);
 		ring_add_bytes(&ring_usb_to_mtbbus, data, data_size);
+
 	} else if (command_code == MTBUSB_CMD_PM_INFO_REQ) {
+		device_usb_tx_req.sep.info = true;
+
 	} else if (command_code == MTBUSB_CMD_PM_CHANGE_SPEED) {
+
+
 	} else if (command_code == MTBUSB_CMD_PM_ACTIVE_MODULES_REQ) {
+		gpio_pin_toggle(pin_led_red);
+		device_usb_tx_req.sep.active_modules = true;
+	}
+}
+
+static inline void poll_usb_tx_flags(void) {
+	if (!cdc_dtr_ready)
+		device_usb_tx_req.all = 0;  // computer does not listen → ignore all flags
+	if (!cdc_main_can_send())
+		return; // USB busy → wait for next poll
+
+	if (device_usb_tx_req.sep.ack) {
+		cdc_send_ack();
+		device_usb_tx_req.sep.ack = false;
+	}
+	if (device_usb_tx_req.sep.info) {
+		cdc_tx.separate.data[0] = MTBUSB_TYPE;
+		cdc_tx.separate.data[1] = 0x00; // module flags
+		cdc_tx.separate.data[2] = FW_VER_MAJOR;
+		cdc_tx.separate.data[3] = FW_VER_MINOR;
+		cdc_tx.separate.data[4] = MTBBUS_PROT_VER_MAJOR;
+		cdc_tx.separate.data[5] = MTBBUS_PROT_VER_MINOR;
+
+		cdc_main_send_nocopy(MTBUSB_CMD_MP_INFO, 6);
+		device_usb_tx_req.sep.info = false;
+	}
+	if (device_usb_tx_req.sep.active_modules) {
+		for (size_t i = 0; i < 32; i++)
+			cdc_tx.separate.data[i] = modules_active[i/4] >> (8*(i%4));
+
+		cdc_main_send_nocopy(MTBUSB_CMD_MP_ACTIVE_MODULES_LIST, 32);
+		device_usb_tx_req.sep.active_modules = false;
 	}
 }
 
