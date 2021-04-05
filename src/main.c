@@ -37,7 +37,7 @@ int main(void) {
 		mtbbus_poll_rx_flags();
 		ring_usb_to_mtbbus_poll();
 
-		HAL_Delay(100);
+		//HAL_Delay(100);
 		gpio_pin_toggle(pin_led_yellow);
 	}
 }
@@ -250,16 +250,14 @@ void TIM3_IRQHandler(void) {
 /* USB -----------------------------------------------------------------------*/
 
 void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
-	gpio_pin_toggle(pin_led_green);
-
 	if ((command_code == MTBUSB_CMD_PM_FORWARD) && (data_size >= 2)) {
-		bool ok = true;
-		ok &= ring_add_byte(&ring_usb_to_mtbbus, data_size+1);
-		ok &= ring_add_bytes(&ring_usb_to_mtbbus, data, data_size);
-
-		if (!ok) {
-			// TODO
+		if (ring_free_space(&ring_usb_to_mtbbus) < data_size+1) {
+			// TODO send full buffer error
+			return;
 		}
+
+		ring_add_byte(&ring_usb_to_mtbbus, data_size+1);
+		ring_add_bytes(&ring_usb_to_mtbbus, data, data_size);
 	} else if (command_code == MTBUSB_CMD_PM_INFO_REQ) {
 	} else if (command_code == MTBUSB_CMD_PM_CHANGE_SPEED) {
 	} else if (command_code == MTBUSB_CMD_PM_ACTIVE_MODULES_REQ) {
@@ -308,7 +306,6 @@ static inline void mtbbus_poll_rx_flags(void) {
 static inline void ring_usb_to_mtbbus_poll(void) {
 	if ((mtbbus_can_send()) && ring_usb_to_mtbbus_message_ready()) {
 		if (mtbbus_send_from_ring(&ring_usb_to_mtbbus)) {
-			gpio_pin_toggle(pin_led_blue);
 			ring_move_begin(&ring_usb_to_mtbbus, ring_get_byte_begin(&ring_usb_to_mtbbus, 0));
 		}
 	}

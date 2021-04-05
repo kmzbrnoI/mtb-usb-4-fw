@@ -53,4 +53,4 @@ void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module);
 #define MTBUSB_CMD_MP_NEW_MODULE 0x23
 #define MTBUSB_CMD_MP_MODULE_FAILED 0x24
 
-#define MTBUSB_ERROR_NO_RESPONSE 0x10
+#define MTBUSB_ERROR_NO_RESPONSE 0x01

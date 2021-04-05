@@ -24,3 +24,9 @@ Read serial in linux:
 $ stty -F /dev/ttyACM0 raw
 $ xxd /dev/ttyACM0
 ```
+
+Send to serial (module 1 info request):
+
+```bash
+$ echo -ne '\x2A\x42\x03\x10\x01\x02' > /dev/ttyACM0
+```

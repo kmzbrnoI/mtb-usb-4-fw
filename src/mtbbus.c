@@ -27,6 +27,8 @@ DMA_Channel_TypeDef* const _uart_rx_dma_channel = DMA1_Channel3;
 uint16_t _out_buf[MTBBUS_OUT_BUF_SIZE];
 uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
 bool _receiving_first = false;
+bool _receiving = false;
+bool _sending = false;
 volatile size_t _response_counter = 0;
 
 #define RESPONSE_COUNTER_FULL 4 // 200 us
@@ -110,10 +112,7 @@ bool mtbbus_init(void) {
 }
 
 bool mtbbus_can_send(void) {
-	HAL_DMA_PollForTransfer(&_dma_tx_handle, HAL_DMA_FULL_TRANSFER, 0);
-	HAL_DMA_PollForTransfer(&_dma_rx_handle, HAL_DMA_FULL_TRANSFER, 0);
-	return (_dma_tx_handle.State == HAL_DMA_STATE_READY) && (_dma_tx_handle.State == HAL_DMA_STATE_READY)
-	       && (mtbbus_rx_flags.all == 0) && (_response_counter == 0);
+	return (!_sending) && (!_receiving) && (mtbbus_rx_flags.all == 0) && (_response_counter == 0);
 }
 
 void DMA1_Channel2_IRQHandler() {
@@ -135,6 +134,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 		// read just a single byte in DMA mode (first byte contains number of bytes following)
 		_response_counter = RESPONSE_COUNTER_FULL;
 		_receiving_first = true;
+		_sending = false;
 		HAL_UART_DMAStop(&_h_uart_mtbbus);
 		HAL_UART_Receive_DMA(&_h_uart_mtbbus, (uint8_t*)mtbbus_received_data, 1);
 	}
@@ -149,6 +149,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 			HAL_UART_Receive_DMA(&_h_uart_mtbbus, (uint8_t*)&mtbbus_received_data[1], mtbbus_received_data[0]+2);
 		} else {
 			// all data received
+			_receiving = false;
 			_message_received();
 		}
 	}
@@ -182,8 +183,10 @@ void _message_timeout() {
 
 void EXTI15_10_IRQHandler(void) {
 	if (__HAL_GPIO_EXTI_GET_FLAG(pin_usart_mtb_rx.pin)) {
-		if (_response_counter > 0)
+		if (_response_counter > 0) {
+			_receiving = true;
 			_response_counter = 0;
+		}
 		HAL_GPIO_EXTI_IRQHandler(pin_usart_mtb_rx.pin);
 	}
 }
@@ -201,6 +204,7 @@ void mtbbus_update_50us(void) {
 bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datalen) {
 	if (!mtbbus_can_send())
 		return false;
+	_sending = true;
 
 	if (command_code != MTBBUS_CMD_MOSI_MODULE_INQUIRY)
 		_inquiry_module = 0;
@@ -220,6 +224,8 @@ bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datal
 	_out_buf[total_len+1] = (crc >> 8) & 0xFF;
 	total_len += 2;
 
+	gpio_pin_toggle(pin_debug_b);
+
 	gpio_pin_write(pin_usart_mtb_dir, true);
 	HAL_UART_Transmit_DMA(&_h_uart_mtbbus, (uint8_t*)_out_buf, total_len);
 
@@ -229,6 +235,7 @@ bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datal
 bool mtbbus_send_from_ring(ring_buffer* buf) {
 	if ((!mtbbus_can_send()) || (ring_length(buf) < 3))
 		return false;
+	_sending = true;
 
 	uint8_t addr = ring_get_byte_begin(buf, 1);
 	uint8_t command_code = ring_get_byte_begin(buf, 2);
@@ -251,6 +258,8 @@ bool mtbbus_send_from_ring(ring_buffer* buf) {
 	_out_buf[total_len] = crc & 0xFF;
 	_out_buf[total_len+1] = (crc >> 8) & 0xFF;
 	total_len += 2;
+
+	gpio_pin_toggle(pin_debug_a);
 
 	gpio_pin_write(pin_usart_mtb_dir, true);
 	HAL_UART_Transmit_DMA(&_h_uart_mtbbus, (uint8_t*)_out_buf, total_len);

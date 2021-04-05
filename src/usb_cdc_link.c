@@ -593,7 +593,7 @@ void cdc_send_ack(void) {
 }
 
 void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module) {
-	uint8_t buf[3] = {error_code, command_code, module};
+	uint8_t buf[3] = {error_code, command_code, module}; // TODO: add module to protocol
 	if (cdc_main_can_send())
-		cdc_main_send_copy(MTBUSB_CMD_MP_ACK, buf, 3);
+		cdc_main_send_copy(MTBUSB_CMD_MP_ERROR, buf, 3);
 }
