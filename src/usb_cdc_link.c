@@ -5,7 +5,6 @@
 #include <string.h>
 #include "usb_cdc_link.h"
 #include "usb_cdc.h"
-#include "gpio.h"
 
 static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep);
 static void main_cdc_tx(usbd_device *dev, uint8_t event, uint8_t ep);
@@ -505,8 +504,6 @@ void USB_LP_IRQ_HANDLER(void) {
 }
 
 static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep) {
-	gpio_pin_toggle(pin_led_red);
-
 	if (event != usbd_evt_eprx)
 		return;
 
