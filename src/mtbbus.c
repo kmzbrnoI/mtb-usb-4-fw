@@ -55,6 +55,7 @@ void _message_received();
 void _message_timeout();
 static inline void _rx_interrupt_enable();
 static inline void _rx_interrupt_disable();
+static inline void _mtbbus_send_buf(size_t total_len);
 
 /* Private code --------------------------------------------------------------*/
 
@@ -227,17 +228,8 @@ bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datal
 	_out_buf[2] = command_code;
 	for (size_t i = 0; i < datalen; i++)
 		_out_buf[3+i] = data[i];
-	size_t total_len = datalen+3;
 
-	uint16_t crc = crc16modbus_bytes(0, _out_buf, total_len);
-	_out_buf[total_len] = crc & 0xFF;
-	_out_buf[total_len+1] = (crc >> 8) & 0xFF;
-	total_len += 2;
-
-	gpio_pin_write(pin_usart_mtb_dir, true);
-	_rx_interrupt_enable();
-	HAL_UART_Transmit_DMA(&_h_uart_mtbbus, (uint8_t*)_out_buf, total_len);
-
+	_mtbbus_send_buf(datalen+3);
 	return true;
 }
 
@@ -261,8 +253,12 @@ bool mtbbus_send_from_ring(ring_buffer* buf) {
 	_out_buf[2] = command_code;
 	for (size_t i = 0; i < datalen; i++)
 		_out_buf[3+i] = ring_get_byte_begin(buf, 3+i);
-	size_t total_len = datalen+3;
 
+	_mtbbus_send_buf(datalen+3);
+	return true;
+}
+
+static inline void _mtbbus_send_buf(size_t total_len) {
 	uint16_t crc = crc16modbus_bytes(0, _out_buf, total_len);
 	_out_buf[total_len] = crc & 0xFF;
 	_out_buf[total_len+1] = (crc >> 8) & 0xFF;
@@ -271,8 +267,6 @@ bool mtbbus_send_from_ring(ring_buffer* buf) {
 	gpio_pin_write(pin_usart_mtb_dir, true);
 	_rx_interrupt_enable();
 	HAL_UART_Transmit_DMA(&_h_uart_mtbbus, (uint8_t*)_out_buf, total_len);
-
-	return true;
 }
 
 void mtbbus_module_inquiry(uint8_t module_addr) {
