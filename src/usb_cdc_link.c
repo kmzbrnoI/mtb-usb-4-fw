@@ -544,7 +544,7 @@ static void main_cdc_tx(usbd_device *dev, uint8_t event, uint8_t ep) {
 	}
 
 	tx.pos += usbd_ep_write(dev, CDC_MAIN_TXD_EP, &cdc_tx.all[tx.pos],
-	                        (tx.size-tx.pos < CDC_DATA_SZ) ? tx.size : CDC_DATA_SZ);
+	                        (tx.size-tx.pos < CDC_DATA_SZ) ? tx.size-tx.pos : CDC_DATA_SZ);
 }
 
 bool cdc_main_can_send(void) {
@@ -568,6 +568,11 @@ bool _cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize, bool c
 
 	tx.pos += usbd_ep_write(&udev, CDC_MAIN_TXD_EP, cdc_tx.all,
 	                        (tx.size < CDC_DATA_SZ) ? tx.size : CDC_DATA_SZ);
+
+	if (tx.pos == 0) {
+		tx.sending = false;
+		return false;
+	}
 
 	return true;
 }
