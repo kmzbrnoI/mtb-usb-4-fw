@@ -246,10 +246,10 @@ void mtbbus_module_inquiry(uint8_t module_addr) {
 
 void _inquiry_response_ok(size_t addr) {
 	_inquiry_module = 0;
+	module_reset_attempts(addr);
 	if (!module_active(addr)) {
 		mtbbus_rx_flags.sep.discovered = true;
 		module_set_active(addr, true);
-		module_reset_attempts(addr);
 	}
 }
 
