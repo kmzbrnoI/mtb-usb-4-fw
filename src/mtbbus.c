@@ -51,8 +51,6 @@ void _inquiry_response_ok(size_t addr);
 void _inquiry_response_timeout(size_t addr);
 void _message_received();
 void _message_timeout();
-static inline void _rx_interrupt_enable();
-static inline void _rx_interrupt_disable();
 
 /* Private code --------------------------------------------------------------*/
 
@@ -83,8 +81,6 @@ bool mtbbus_init(void) {
 	_dma_rx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
 	_dma_rx_handle.Init.Priority = DMA_PRIORITY_MEDIUM;
 	HAL_DMA_Init(&_dma_rx_handle);
-	//HAL_DMA_Start(&_dma_rx_handle, uintptr_t(&(controlUart->DR)), uintptr_t(rxFifo.data()), rxFifo.size());
-	//LL_USART_EnableDMAReq_RX(controlUart);
 	HAL_NVIC_SetPriority(_uart_rx_dma_irqn, _uart_rx_dma_irq_prio, 0);
 	HAL_NVIC_EnableIRQ(_uart_rx_dma_irqn);
 	__HAL_LINKDMA(&_h_uart_mtbbus, hdmarx, _dma_rx_handle);
@@ -105,7 +101,7 @@ bool mtbbus_init(void) {
 	__HAL_LINKDMA(&_h_uart_mtbbus, hdmatx, _dma_tx_handle);
 
 	gpio_pin_init(pin_usart_mtb_tx, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, false);
-	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_AF_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, false);
+	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_IT_FALLING, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, true);
 	gpio_pin_init(pin_usart_mtb_dir, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW, false);
 
 	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
@@ -186,18 +182,10 @@ void _message_timeout() {
 
 void EXTI15_10_IRQHandler(void) {
 	if (__HAL_GPIO_EXTI_GET_FLAG(pin_usart_mtb_rx.pin)) {
-		_response_counter = 0;
-		_rx_interrupt_disable();
+		if (_response_counter > 0)
+			_response_counter = 0;
 		HAL_GPIO_EXTI_IRQHandler(pin_usart_mtb_rx.pin);
 	}
-}
-
-static inline void _rx_interrupt_enable() {
-	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_IT_FALLING, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, true);
-}
-
-static inline void _rx_interrupt_disable() {
-	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_AF_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, true);
 }
 
 void mtbbus_update_50us(void) {
@@ -233,7 +221,6 @@ bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datal
 	total_len += 2;
 
 	gpio_pin_write(pin_usart_mtb_dir, true);
-	_rx_interrupt_enable();
 	HAL_UART_Transmit_DMA(&_h_uart_mtbbus, (uint8_t*)_out_buf, total_len);
 
 	return true;
