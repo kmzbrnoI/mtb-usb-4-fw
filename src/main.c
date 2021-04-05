@@ -28,6 +28,12 @@ typedef union {
 
 DeviceUsbTxReq device_usb_tx_req;
 uint32_t _speed_change_req = 0;
+size_t _inq_period_counter = 0;
+size_t _inq_period_max = 5;
+
+#define MTBBUS_SPEEDS 3
+const uint32_t _speed_to_br[MTBBUS_SPEEDS] = {38400, 57600, 115200};
+const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {5, 3, 2}; // in milliseconds
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -156,11 +162,11 @@ bool clock_init(void) {
 
 	HAL_NVIC_EnableIRQ(TIM2_IRQn);
 
-	// Timer 3 @ 5 ms
+	// Timer 3 @ 1 ms
 	h_tim3.Instance = TIM3;
 	h_tim3.Init.Prescaler = 128;
 	h_tim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-	h_tim3.Init.Period = 1859;
+	h_tim3.Init.Period = 372;
 	h_tim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	h_tim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&h_tim3) != HAL_OK)
@@ -257,9 +263,13 @@ void TIM2_IRQHandler(void) {
 }
 
 void TIM3_IRQHandler(void) {
-	// Timer 3 @ 5 ms (200 Hz)
-	if (mtbbus_can_send() && (!ring_usb_to_mtbbus_message_ready()) && (_speed_change_req == 0))
-		mtbbus_modules_inquiry();
+	// Timer 3 @ 1 ms (1 kHz)
+	_inq_period_counter++;
+	if (_inq_period_counter >= _inq_period_max) {
+		_inq_period_counter = 0;
+		if (mtbbus_can_send() && (!ring_usb_to_mtbbus_message_ready()) && (_speed_change_req == 0))
+			mtbbus_modules_inquiry();
+	}
 
 	HAL_TIM_IRQHandler(&h_tim3);
 }
@@ -281,12 +291,11 @@ void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 
 	} else if ((command_code == MTBUSB_CMD_PM_CHANGE_SPEED) && (data_size >= 1)) {
 		uint8_t speed = data[0];
-		if (speed == 1)
-			_speed_change_req = 57600;
-		else if (speed == 2)
-			_speed_change_req = 115200;
-		else
-			_speed_change_req = 38400;
+		if (speed > MTBBUS_SPEEDS)
+			speed = 0;
+
+		_speed_change_req = _speed_to_br[speed];
+		_inq_period_max = _speed_to_inq_period[speed];
 
 		device_usb_tx_req.sep.ack = true;
 
