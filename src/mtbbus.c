@@ -26,24 +26,20 @@ DMA_Channel_TypeDef* const _uart_rx_dma_channel = DMA1_Channel3;
 
 uint16_t _out_buf[MTBBUS_OUT_BUF_SIZE];
 uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
-bool _receiving_first = false;
-bool _receiving = false;
-bool _sending = false;
+volatile bool _receiving_first = false;
+volatile bool _receiving = false;
+volatile bool _sending = false;
 volatile size_t _response_counter = 0;
 
 #define RESPONSE_COUNTER_FULL 4 // 200 us
 
 /* Higher-level data structures ----------------------------------------------*/
 
-MtbBusRxFlags mtbbus_rx_flags = {.all=0};
+volatile MtbBusRxFlags mtbbus_rx_flags = {.all=0};
 
-size_t mtbbus_addr = 0;
-size_t mtbbus_command_code = 0;
-size_t _inquiry_module = 0;
-
-uint8_t _inquiry_exist_module = 0;
-uint8_t _inquiry_nonexist_module = 0;
-size_t _inquiry_nonexist_counter = 0;
+volatile size_t mtbbus_addr = 0;
+volatile size_t mtbbus_command_code = 0;
+volatile size_t _inquiry_module = 0;
 
 #define INQUIRY_NONEXIST_PER_CYCLE 10
 
@@ -239,7 +235,7 @@ bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datal
 	return true;
 }
 
-bool mtbbus_send_from_ring(ring_buffer* buf) {
+bool mtbbus_send_from_ring(volatile ring_buffer* buf) {
 	if ((!mtbbus_can_send()) || (ring_length(buf) < 3))
 		return false;
 	_sending = true;
@@ -302,6 +298,10 @@ static inline void _inquiry_response_timeout(size_t addr) {
 /* Modules polling -----------------------------------------------------------*/
 
 void mtbbus_modules_inquiry(void) {
+	static uint8_t _inquiry_exist_module = 0;
+	static uint8_t _inquiry_nonexist_module = 0;
+	static size_t _inquiry_nonexist_counter = 0;
+
 	// increment counters
 	if (_inquiry_exist_module == 0) {
 		_inquiry_nonexist_module++;

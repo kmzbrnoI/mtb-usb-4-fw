@@ -27,7 +27,7 @@ typedef union {
 } CdcTxData;
 
 extern CdcTxData cdc_tx;
-extern bool cdc_dtr_ready; // if computer reads data
+extern volatile bool cdc_dtr_ready; // if computer reads data
 
 extern void (*cdc_main_received)(uint8_t command_code, uint8_t *data, size_t data_size);
 

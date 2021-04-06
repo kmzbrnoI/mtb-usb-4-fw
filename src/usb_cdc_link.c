@@ -29,7 +29,7 @@ bool _cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize, bool c
 #define USB_LP_IRQ_HANDLER USB_LP_CAN1_RX0_IRQHandler
 const IRQn_Type usbLpIRQn = USB_LP_CAN1_RX0_IRQn;
 const unsigned usbLpIRQnPrio = 8;
-bool cdc_dtr_ready = false;
+volatile bool cdc_dtr_ready = false;
 
 enum {
 	STRDESC_LANG,

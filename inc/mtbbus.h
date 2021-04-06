@@ -28,10 +28,10 @@ typedef union {
 	} sep;
 } MtbBusRxFlags;
 
-extern MtbBusRxFlags mtbbus_rx_flags;
+extern volatile MtbBusRxFlags mtbbus_rx_flags;
 extern uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
-extern size_t mtbbus_addr;
-extern size_t mtbbus_command_code;
+extern volatile size_t mtbbus_addr;
+extern volatile size_t mtbbus_command_code;
 
 
 bool mtbbus_init(uint32_t speed);
@@ -41,7 +41,7 @@ void mtbbus_update_50us(void);
 // mtbbus_can_send() must be true before calling these functions:
 bool mtbbus_change_speed(uint32_t speed);
 bool mtbbus_send(uint8_t addr, uint8_t command_code, uint8_t *data, size_t datalen);
-bool mtbbus_send_from_ring(ring_buffer* buf);
+bool mtbbus_send_from_ring(volatile ring_buffer* buf);
 
 void mtbbus_module_inquiry(uint8_t module_addr);
 void mtbbus_modules_inquiry(void);

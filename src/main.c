@@ -15,7 +15,7 @@ TIM_HandleTypeDef h_tim3;
 
 #define RING_USB_TO_MTBBUS_SIZE 256
 uint8_t _usb_to_mtbbus_data[RING_USB_TO_MTBBUS_SIZE];
-ring_buffer ring_usb_to_mtbbus;
+volatile ring_buffer ring_usb_to_mtbbus;
 
 typedef union {
 	size_t all;
@@ -26,8 +26,8 @@ typedef union {
 	} sep;
 } DeviceUsbTxReq;
 
-DeviceUsbTxReq device_usb_tx_req;
-uint32_t _speed_change_req = 0;
+volatile DeviceUsbTxReq device_usb_tx_req;
+volatile uint32_t _speed_change_req = 0;
 size_t _inq_period_counter = 0;
 size_t _inq_period_max = 5;
 
@@ -59,9 +59,6 @@ int main(void) {
 		ring_usb_to_mtbbus_poll();
 		poll_usb_tx_flags();
 		poll_speed_change();
-
-		//HAL_Delay(100);
-		gpio_pin_toggle(pin_led_yellow);
 	}
 }
 
