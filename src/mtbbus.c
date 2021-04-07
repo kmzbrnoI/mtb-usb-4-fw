@@ -27,11 +27,12 @@ DMA_Channel_TypeDef* const _uart_rx_dma_channel = DMA1_Channel3;
 uint16_t _out_buf[MTBBUS_OUT_BUF_SIZE];
 uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
 volatile bool _receiving_first = false;
-volatile bool _receiving = false;
+volatile size_t _receiving = 0; // 0 = not receiving, 1..RECEIGIN_UPDATE_TIMEOUT = receiving
 volatile bool _sending = false;
 volatile size_t _response_counter = 0;
 
 #define RESPONSE_COUNTER_FULL 4 // 200 us
+#define RECEIVING_UPDATE_TIMEOUT 2000 // 100 ms
 
 /* Higher-level data structures ----------------------------------------------*/
 
@@ -115,7 +116,7 @@ bool mtbbus_change_speed(uint32_t speed) {
 }
 
 bool mtbbus_can_send(void) {
-	return (!_sending) && (!_receiving) && (mtbbus_rx_flags.all == 0) && (_response_counter == 0);
+	return (!_sending) && (_receiving == 0) && (mtbbus_rx_flags.all == 0) && (_response_counter == 0);
 }
 
 void DMA1_Channel2_IRQHandler() {
@@ -152,7 +153,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 			HAL_UART_Receive_DMA(&_h_uart_mtbbus, (uint8_t*)&mtbbus_received_data[1], mtbbus_received_data[0]+2);
 		} else {
 			// all data received
-			_receiving = false;
+			_receiving = 0;
 			_message_received();
 		}
 	}
@@ -187,7 +188,7 @@ void _message_timeout() {
 void EXTI15_10_IRQHandler(void) {
 	if (__HAL_GPIO_EXTI_GET_FLAG(pin_usart_mtb_rx.pin)) {
 		if (_response_counter > 0) {
-			_receiving = true;
+			_receiving = RECEIVING_UPDATE_TIMEOUT;
 			_response_counter = 0;
 		}
 		_response_counter = 0;
@@ -210,6 +211,9 @@ void mtbbus_update_50us(void) {
 		if (_response_counter == 0)
 			_message_timeout();
 	}
+	// In device sends only part of message, do not block bus
+	if (_receiving > 0)
+		_receiving--;
 }
 
 /* Higher-level MTBbus functions ---------------------------------------------*/
