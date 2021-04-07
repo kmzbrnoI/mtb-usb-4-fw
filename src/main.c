@@ -6,6 +6,7 @@
 #include "modules.h"
 #include "ring_buffer.h"
 #include "common.h"
+#include "ee.h"
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -31,6 +32,11 @@ volatile uint32_t _speed_change_req = 0;
 size_t _inq_period_counter = 0;
 size_t _inq_period_max = 5;
 
+struct {
+	uint8_t mtbbus_speed;
+} config;
+volatile bool _config_save = false;
+
 #define MTBBUS_SPEEDS 3
 const uint32_t _speed_to_br[MTBBUS_SPEEDS] = {38400, 57600, 115200};
 const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {5, 3, 2}; // in milliseconds
@@ -44,12 +50,16 @@ static bool debug_uart_init(void);
 void usb_received(uint8_t command_code, uint8_t *data, size_t data_size);
 void forward_mtbbus_received_to_usb();
 static inline void mtbbus_poll_rx_flags(void);
-static inline void ring_usb_to_mtbbus_poll(void);
+static void ring_usb_to_mtbbus_poll(void);
 static inline bool ring_usb_to_mtbbus_message_ready(void);
 static inline void poll_usb_tx_flags(void);
 static inline void poll_speed_change(void);
 
-/* Private code --------------------------------------------------------------*/
+static inline void config_load(void);
+static inline bool config_save(void);
+static inline void config_save_poll(void);
+
+/* Code ----------------------------------------------------------------------*/
 
 int main(void) {
 	init();
@@ -59,6 +69,7 @@ int main(void) {
 		ring_usb_to_mtbbus_poll();
 		poll_usb_tx_flags();
 		poll_speed_change();
+		config_save_poll();
 	}
 }
 
@@ -66,7 +77,6 @@ void init(void) {
 	if (!clock_init())
 		error_handler();
 	HAL_Init();
-
 	gpio_init();
 
 	gpio_pin_write(pin_led_red, true);
@@ -74,7 +84,11 @@ void init(void) {
 	gpio_pin_write(pin_led_green, true);
 	gpio_pin_write(pin_led_blue, true);
 
-	if (!mtbbus_init(38400))
+	ee_init();
+	config_load();
+
+	_inq_period_max = _speed_to_inq_period[config.mtbbus_speed];
+	if (!mtbbus_init(_speed_to_br[config.mtbbus_speed]))
 		error_handler();
 	if (!i2c_init())
 		error_handler();
@@ -293,6 +307,8 @@ void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 
 		_speed_change_req = _speed_to_br[speed];
 		_inq_period_max = _speed_to_inq_period[speed];
+		config.mtbbus_speed = speed;
+		_config_save = true;
 
 		device_usb_tx_req.sep.ack = true;
 
@@ -370,7 +386,7 @@ static inline void mtbbus_poll_rx_flags(void) {
 	}
 }
 
-static inline void ring_usb_to_mtbbus_poll(void) {
+static void ring_usb_to_mtbbus_poll(void) {
 	if ((mtbbus_can_send()) && ring_usb_to_mtbbus_message_ready()) {
 		if (mtbbus_send_from_ring(&ring_usb_to_mtbbus)) {
 			ring_move_begin(&ring_usb_to_mtbbus, ring_get_byte_begin(&ring_usb_to_mtbbus, 0));
@@ -388,4 +404,25 @@ static inline void poll_speed_change(void) {
 		mtbbus_change_speed(_speed_change_req);
 		_speed_change_req = 0;
 	}
+}
+
+/* Config --------------------------------------------------------------------*/
+
+static inline void config_save_poll(void) {
+	if (_config_save) {
+		config_save();
+		_config_save = false;
+	}
+}
+
+static inline void config_load(void) {
+	ee_read(0, 1, &config.mtbbus_speed);
+	if (config.mtbbus_speed >= MTBBUS_SPEEDS)
+		config.mtbbus_speed = 0;
+}
+
+static inline bool config_save(void) {
+	if (!ee_format(false))
+		return false;
+	return ee_write(0, 1, &config.mtbbus_speed);
 }

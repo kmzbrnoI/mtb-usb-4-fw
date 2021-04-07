@@ -29,6 +29,7 @@ C_SOURCES = \
 	$(STM32_SRC_PATH)/stm32f1xx_hal_pcd_ex.c \
 	lib/libusb_stm32/src/usbd_stm32f103_devfs.c \
 	lib/libusb_stm32/src/usbd_core.c \
+	lib/eeprom/ee.c \
 	$(wildcard src/*.c)
 
 ASM_SOURCES = startup_stm32f103xb.s
@@ -80,6 +81,7 @@ C_OR_CPP_INCLUDES = \
 	-I$(STM32_DRIVERS_PATH)/CMSIS/Device/ST/STM32F1xx/Include \
 	-I$(STM32_DRIVERS_PATH)/CMSIS/Include \
 	-Ilib/libusb_stm32/inc \
+	-Ilib/eeprom \
 	-I inc
 
 AS_INCLUDES =
