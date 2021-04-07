@@ -46,6 +46,11 @@ struct {
 	size_t shutdown;
 } led_red_counters = {0, 0};
 
+struct {
+	size_t global;
+	size_t shutdown;
+} led_green_counters = {0, 0};
+
 /* Private function prototypes -----------------------------------------------*/
 
 static void error_handler();
@@ -66,6 +71,7 @@ static inline void config_save_poll(void);
 
 static inline void leds_poll(void);
 static inline void led_red_activate(size_t millis_enable, size_t millis_disable);
+static inline void led_green_activate(size_t millis_enable, size_t millis_disable);
 
 /* Code ----------------------------------------------------------------------*/
 
@@ -286,8 +292,10 @@ void TIM3_IRQHandler(void) {
 	_inq_period_counter++;
 	if (_inq_period_counter >= _inq_period_max) {
 		_inq_period_counter = 0;
-		if (mtbbus_can_send() && (!ring_usb_to_mtbbus_message_ready()) && (_speed_change_req == 0))
+		if (mtbbus_can_send() && (!ring_usb_to_mtbbus_message_ready()) && (_speed_change_req == 0)) {
 			mtbbus_modules_inquiry();
+			led_green_activate(50, 50);
+		}
 	}
 
 	leds_poll();
@@ -448,6 +456,12 @@ static inline void leds_poll(void) {
 		if (led_red_counters.global == led_red_counters.shutdown)
 			gpio_pin_write(pin_led_red, false);
 	}
+
+	if (led_green_counters.global > 0) {
+		led_green_counters.global--;
+		if (led_green_counters.global == led_green_counters.shutdown)
+			gpio_pin_write(pin_led_green, false);
+	}
 }
 
 static inline void led_red_activate(size_t millis_enable, size_t millis_disable) {
@@ -455,5 +469,13 @@ static inline void led_red_activate(size_t millis_enable, size_t millis_disable)
 		led_red_counters.global = millis_enable+millis_disable;
 		led_red_counters.shutdown = millis_disable;
 		gpio_pin_write(pin_led_red, true);
+	}
+}
+
+static inline void led_green_activate(size_t millis_enable, size_t millis_disable) {
+	if (led_green_counters.global == 0) {
+		led_green_counters.global = millis_enable+millis_disable;
+		led_green_counters.shutdown = millis_disable;
+		gpio_pin_write(pin_led_green, true);
 	}
 }
