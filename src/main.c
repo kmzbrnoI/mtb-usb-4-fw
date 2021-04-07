@@ -374,7 +374,7 @@ static inline void mtbbus_poll_rx_flags(void) {
 
 	if (mtbbus_rx_flags.sep.timeout_inquiry) {
 		cdc_tx.separate.data[0] = mtbbus_addr;
-		cdc_tx.separate.data[1] = module_get_attempts(mtbbus_addr); // TODO: add to protocol
+		cdc_tx.separate.data[1] = module_get_attempts(mtbbus_addr);
 		cdc_main_send_nocopy(MTBUSB_CMD_MP_MODULE_FAILED, 2);
 		mtbbus_rx_flags.sep.timeout_inquiry = false;
 	}
