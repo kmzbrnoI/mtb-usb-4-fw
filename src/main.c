@@ -37,9 +37,9 @@ struct {
 } config;
 volatile bool _config_save = false;
 
-#define MTBBUS_SPEEDS 3
-const uint32_t _speed_to_br[MTBBUS_SPEEDS] = {38400, 57600, 115200};
-const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {5, 3, 2}; // in milliseconds
+#define MTBBUS_SPEEDS 4
+const uint32_t _speed_to_br[MTBBUS_SPEEDS] = {38400, 38400, 57600, 115200};
+const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {5, 5, 3, 2}; // in milliseconds
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -302,8 +302,8 @@ void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 
 	} else if ((command_code == MTBUSB_CMD_PM_CHANGE_SPEED) && (data_size >= 1)) {
 		uint8_t speed = data[0];
-		if (speed > MTBBUS_SPEEDS)
-			speed = 0;
+		if ((speed >= MTBBUS_SPEEDS) || (speed == 0))
+			speed = 1;
 
 		_speed_change_req = _speed_to_br[speed];
 		_inq_period_max = _speed_to_inq_period[speed];
@@ -329,7 +329,7 @@ static inline void poll_usb_tx_flags(void) {
 	}
 	if (device_usb_tx_req.sep.info) {
 		cdc_tx.separate.data[0] = MTBUSB_TYPE;
-		cdc_tx.separate.data[1] = 0x00; // module flags
+		cdc_tx.separate.data[1] = config.mtbbus_speed;
 		cdc_tx.separate.data[2] = FW_VER_MAJOR;
 		cdc_tx.separate.data[3] = FW_VER_MINOR;
 		cdc_tx.separate.data[4] = MTBBUS_PROT_VER_MAJOR;
@@ -417,8 +417,8 @@ static inline void config_save_poll(void) {
 
 static inline void config_load(void) {
 	ee_read(0, 1, &config.mtbbus_speed);
-	if (config.mtbbus_speed >= MTBBUS_SPEEDS)
-		config.mtbbus_speed = 0;
+	if ((config.mtbbus_speed >= MTBBUS_SPEEDS) || (config.mtbbus_speed == 0))
+		config.mtbbus_speed = 1;
 }
 
 static inline bool config_save(void) {
