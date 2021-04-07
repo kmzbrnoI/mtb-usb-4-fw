@@ -41,6 +41,11 @@ volatile bool _config_save = false;
 const uint32_t _speed_to_br[MTBBUS_SPEEDS] = {38400, 38400, 57600, 115200};
 const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {5, 5, 3, 2}; // in milliseconds
 
+struct {
+	size_t global;
+	size_t shutdown;
+} led_red_counters = {0, 0};
+
 /* Private function prototypes -----------------------------------------------*/
 
 static void error_handler();
@@ -58,6 +63,9 @@ static inline void poll_speed_change(void);
 static inline void config_load(void);
 static inline bool config_save(void);
 static inline void config_save_poll(void);
+
+static inline void leds_poll(void);
+static inline void led_red_activate(size_t millis_enable, size_t millis_disable);
 
 /* Code ----------------------------------------------------------------------*/
 
@@ -282,6 +290,7 @@ void TIM3_IRQHandler(void) {
 			mtbbus_modules_inquiry();
 	}
 
+	leds_poll();
 	HAL_TIM_IRQHandler(&h_tim3);
 }
 
@@ -406,6 +415,10 @@ static inline void poll_speed_change(void) {
 	}
 }
 
+void mtbbus_bad_checksum(void) {
+	led_red_activate(100, 100);
+}
+
 /* Config --------------------------------------------------------------------*/
 
 static inline void config_save_poll(void) {
@@ -425,4 +438,22 @@ static inline bool config_save(void) {
 	if (!ee_format(false))
 		return false;
 	return ee_write(0, 1, &config.mtbbus_speed);
+}
+
+/* LEDs ----------------------------------------------------------------------*/
+
+static inline void leds_poll(void) {
+	if (led_red_counters.global > 0) {
+		led_red_counters.global--;
+		if (led_red_counters.global == led_red_counters.shutdown)
+			gpio_pin_write(pin_led_red, false);
+	}
+}
+
+static inline void led_red_activate(size_t millis_enable, size_t millis_disable) {
+	if (led_red_counters.global == 0) {
+		led_red_counters.global = millis_enable+millis_disable;
+		led_red_counters.shutdown = millis_disable;
+		gpio_pin_write(pin_led_red, true);
+	}
 }

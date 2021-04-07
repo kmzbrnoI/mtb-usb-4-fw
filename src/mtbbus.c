@@ -165,8 +165,10 @@ static inline void _message_received() {
 	uint16_t crc = crc16modbus_bytes(0, mtbbus_received_data, mtbbus_received_data[0]+1);
 	size_t xorpos = mtbbus_received_data[0]+1;
 
-	if ((mtbbus_received_data[xorpos] != (crc & 0xFF)) || (mtbbus_received_data[xorpos+1] != ((crc>>8) & 0xFF)))
-		return; // bad checksum
+	if ((mtbbus_received_data[xorpos] != (crc & 0xFF)) || (mtbbus_received_data[xorpos+1] != ((crc>>8) & 0xFF))) {
+		mtbbus_bad_checksum();
+		return;
+	}
 
 	if ((_inquiry_module == 0) || (mtbbus_received_data[1] != MTBBUS_CMD_MISO_ACK)) {
 		_inquiry_module = 0;

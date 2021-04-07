@@ -46,6 +46,8 @@ bool mtbbus_send_from_ring(volatile ring_buffer* buf);
 void mtbbus_module_inquiry(uint8_t module_addr);
 void mtbbus_modules_inquiry(void);
 
+void mtbbus_bad_checksum(void);
+
 #define MTBBUS_CMD_MOSI_MODULE_INQUIRY 0x01
 
 #define MTBBUS_CMD_MISO_ACK 0x01
