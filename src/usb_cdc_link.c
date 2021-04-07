@@ -1,10 +1,11 @@
-/// Implements USB CDC using libusb_stm
+// Implements USB CDC using libusb_stm
 
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include "usb_cdc_link.h"
 #include "usb_cdc.h"
+#include "gpio.h"
 
 static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep);
 static void main_cdc_tx(usbd_device *dev, uint8_t event, uint8_t ep);
@@ -363,6 +364,7 @@ static usbd_respond cdc_control_main(usbd_device* dev, usbd_ctlreq* req) {
 	switch (req->bRequest) {
 	case USB_CDC_SET_CONTROL_LINE_STATE: {
 		cdc_dtr_ready = req->wValue & 0x1;
+		gpio_pin_write(pin_led_yellow, !cdc_dtr_ready);
 		return usbd_ack;
 	}
 	case USB_CDC_SET_LINE_CODING: {

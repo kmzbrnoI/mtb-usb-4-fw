@@ -7,6 +7,7 @@
 #include "ring_buffer.h"
 #include "common.h"
 #include "ee.h"
+#include "leds.h"
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -41,16 +42,6 @@ volatile bool _config_save = false;
 const uint32_t _speed_to_br[MTBBUS_SPEEDS] = {38400, 38400, 57600, 115200};
 const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {5, 5, 3, 2}; // in milliseconds
 
-struct {
-	size_t global;
-	size_t shutdown;
-} led_red_counters = {0, 0};
-
-struct {
-	size_t global;
-	size_t shutdown;
-} led_green_counters = {0, 0};
-
 /* Private function prototypes -----------------------------------------------*/
 
 static void error_handler();
@@ -68,10 +59,6 @@ static inline void poll_speed_change(void);
 static inline void config_load(void);
 static inline bool config_save(void);
 static inline void config_save_poll(void);
-
-static inline void leds_poll(void);
-static inline void led_red_activate(size_t millis_enable, size_t millis_disable);
-static inline void led_green_activate(size_t millis_enable, size_t millis_disable);
 
 /* Code ----------------------------------------------------------------------*/
 
@@ -92,6 +79,7 @@ void init(void) {
 		error_handler();
 	HAL_Init();
 	gpio_init();
+	leds_init();
 
 	gpio_pin_write(pin_led_red, true);
 	gpio_pin_write(pin_led_yellow, true);
@@ -119,7 +107,8 @@ void init(void) {
 	HAL_Delay(100);
 
 	gpio_pin_write(pin_led_red, false);
-	gpio_pin_write(pin_led_yellow, false);
+	if (cdc_dtr_ready)
+		gpio_pin_write(pin_led_yellow, false);
 	gpio_pin_write(pin_led_green, false);
 	gpio_pin_write(pin_led_blue, false);
 }
@@ -294,11 +283,11 @@ void TIM3_IRQHandler(void) {
 		_inq_period_counter = 0;
 		if (mtbbus_can_send() && (!ring_usb_to_mtbbus_message_ready()) && (_speed_change_req == 0)) {
 			mtbbus_modules_inquiry();
-			led_green_activate(50, 50);
+			led_activate(pin_led_green, 50, 50);
 		}
 	}
 
-	leds_poll();
+	leds_update_1ms();
 	HAL_TIM_IRQHandler(&h_tim3);
 }
 
@@ -424,7 +413,7 @@ static inline void poll_speed_change(void) {
 }
 
 void mtbbus_bad_checksum(void) {
-	led_red_activate(100, 100);
+	led_activate(pin_led_red, 100, 100);
 }
 
 /* Config --------------------------------------------------------------------*/
@@ -446,36 +435,4 @@ static inline bool config_save(void) {
 	if (!ee_format(false))
 		return false;
 	return ee_write(0, 1, &config.mtbbus_speed);
-}
-
-/* LEDs ----------------------------------------------------------------------*/
-
-static inline void leds_poll(void) {
-	if (led_red_counters.global > 0) {
-		led_red_counters.global--;
-		if (led_red_counters.global == led_red_counters.shutdown)
-			gpio_pin_write(pin_led_red, false);
-	}
-
-	if (led_green_counters.global > 0) {
-		led_green_counters.global--;
-		if (led_green_counters.global == led_green_counters.shutdown)
-			gpio_pin_write(pin_led_green, false);
-	}
-}
-
-static inline void led_red_activate(size_t millis_enable, size_t millis_disable) {
-	if (led_red_counters.global == 0) {
-		led_red_counters.global = millis_enable+millis_disable;
-		led_red_counters.shutdown = millis_disable;
-		gpio_pin_write(pin_led_red, true);
-	}
-}
-
-static inline void led_green_activate(size_t millis_enable, size_t millis_disable) {
-	if (led_green_counters.global == 0) {
-		led_green_counters.global = millis_enable+millis_disable;
-		led_green_counters.shutdown = millis_disable;
-		gpio_pin_write(pin_led_green, true);
-	}
 }
