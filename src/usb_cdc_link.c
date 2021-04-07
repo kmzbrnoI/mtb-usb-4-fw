@@ -6,6 +6,7 @@
 #include "usb_cdc_link.h"
 #include "usb_cdc.h"
 #include "gpio.h"
+#include "leds.h"
 
 static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep);
 static void main_cdc_tx(usbd_device *dev, uint8_t event, uint8_t ep);
@@ -509,6 +510,9 @@ static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep) {
 	if (event != usbd_evt_eprx)
 		return;
 
+	if (cdc_dtr_ready)
+		led_activate(pin_led_yellow, 50, 50);
+
 	const size_t RX_MAX_DELAY_MS = 20;
 	static size_t last_time = 0;
 	if ((rx.pos > 0) && (last_time+RX_MAX_DELAY_MS < HAL_GetTick()))
@@ -558,6 +562,8 @@ bool cdc_main_can_send(void) {
 bool _cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize, bool copy) {
 	if ((!cdc_main_can_send()) || (datasize > CDC_MTBUSB_BUF_SIZE-4))
 		return false;
+
+	led_activate(pin_led_yellow, 50, 50);
 
 	cdc_tx.separate.magic1 = 0x2A;
 	cdc_tx.separate.magic2 = 0x42;
