@@ -48,6 +48,9 @@ volatile size_t mtbbus_reset_counter = 0;
 #define MTBBUS_RESET_FULL 151
 #define MTBBUS_DO_RESET 50
 
+#define MTBBUS_SEND_ATTEMPTS 3
+volatile uint8_t mtbbus_resent_times = 0;
+
 /* Private function prototypes -----------------------------------------------*/
 
 static void error_handler();
@@ -65,6 +68,8 @@ static inline void poll_speed_change(void);
 static inline void config_load(void);
 static inline bool config_save(void);
 static inline void config_save_poll(void);
+
+static void mtbbus_message_processed(void);
 
 /* Code ----------------------------------------------------------------------*/
 
@@ -386,10 +391,11 @@ void cdc_main_died() {
 /* MTBbus --------------------------------------------------------------------*/
 
 void forward_mtbbus_received_to_usb() {
-	cdc_tx.separate.data[0] = mtbbus_addr;
+	cdc_tx.separate.data[0] = mtbbus_resent_times;
+	cdc_tx.separate.data[1] = mtbbus_addr;
 	for (size_t i = 1; i < mtbbus_received_data[0]+1; i++)
-		cdc_tx.separate.data[i] = mtbbus_received_data[i] & 0xFF;
-	cdc_main_send_nocopy(MTBUSB_CMD_MP_FORWARD, mtbbus_received_data[0]+1);
+		cdc_tx.separate.data[i+1] = mtbbus_received_data[i] & 0xFF;
+	cdc_main_send_nocopy(MTBUSB_CMD_MP_FORWARD, mtbbus_received_data[0]+2);
 }
 
 static inline void mtbbus_poll_rx_flags(void) {
@@ -400,11 +406,15 @@ static inline void mtbbus_poll_rx_flags(void) {
 
 	if (mtbbus_rx_flags.sep.received) {
 		forward_mtbbus_received_to_usb();
+		mtbbus_message_processed();
 		mtbbus_rx_flags.sep.received = false;
 	}
 
 	if (mtbbus_rx_flags.sep.timeout_pc) {
-		cdc_send_error(MTBUSB_ERROR_NO_RESPONSE, mtbbus_command_code, mtbbus_addr);
+		if (mtbbus_resent_times == MTBBUS_SEND_ATTEMPTS) {
+			cdc_send_error(MTBUSB_ERROR_NO_RESPONSE, mtbbus_command_code, mtbbus_addr);
+			mtbbus_message_processed();
+		}
 		mtbbus_rx_flags.sep.timeout_pc = false;
 	}
 
@@ -423,10 +433,9 @@ static inline void mtbbus_poll_rx_flags(void) {
 }
 
 static void ring_usb_to_mtbbus_poll(void) {
-	if ((mtbbus_can_send()) && ring_usb_to_mtbbus_message_ready()) {
-		if (mtbbus_send_from_ring(&ring_usb_to_mtbbus)) {
-			ring_move_begin(&ring_usb_to_mtbbus, ring_get_byte_begin(&ring_usb_to_mtbbus, 0));
-		}
+	if ((mtbbus_can_send()) && ring_usb_to_mtbbus_message_ready() && (mtbbus_resent_times < MTBBUS_SEND_ATTEMPTS)) {
+		if (mtbbus_send_from_ring(&ring_usb_to_mtbbus))
+			mtbbus_resent_times++;
 	}
 }
 
@@ -444,6 +453,12 @@ static inline void poll_speed_change(void) {
 
 void mtbbus_bad_checksum(void) {
 	led_activate(pin_led_red, 100, 100);
+}
+
+static void mtbbus_message_processed(void) {
+	mtbbus_resent_times = 0;
+	if (ring_usb_to_mtbbus_message_ready())
+		ring_move_begin(&ring_usb_to_mtbbus, ring_get_byte_begin(&ring_usb_to_mtbbus, 0));
 }
 
 /* Config --------------------------------------------------------------------*/
