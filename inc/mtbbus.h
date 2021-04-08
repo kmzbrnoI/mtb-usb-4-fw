@@ -49,6 +49,7 @@ void mtbbus_modules_inquiry(void);
 void mtbbus_bad_checksum(void);
 
 #define MTBBUS_CMD_MOSI_MODULE_INQUIRY 0x01
+#define MTBBUS_CMD_MOSI_RESET_OUTPUTS 0x12
 
 #define MTBBUS_CMD_MISO_ACK 0x01
 #define MTBBUS_CMD_MISO_ERROR 0x02

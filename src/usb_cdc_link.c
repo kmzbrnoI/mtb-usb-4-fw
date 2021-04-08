@@ -364,6 +364,8 @@ static usbd_respond cdc_getdesc(
 static usbd_respond cdc_control_main(usbd_device* dev, usbd_ctlreq* req) {
 	switch (req->bRequest) {
 	case USB_CDC_SET_CONTROL_LINE_STATE: {
+		if (cdc_dtr_ready && !(req->wValue & 0x1))
+			cdc_main_died();
 		cdc_dtr_ready = req->wValue & 0x1;
 		gpio_pin_write(pin_led_yellow, !cdc_dtr_ready);
 		return usbd_ack;

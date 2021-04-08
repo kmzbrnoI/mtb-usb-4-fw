@@ -36,6 +36,7 @@ bool cdc_is_debug_ep_enabled();
 bool cdc_main_can_send(void);
 bool cdc_main_send_copy(uint8_t command_code, uint8_t *data, size_t datasize);
 bool cdc_main_send_nocopy(uint8_t command_code, size_t datasize);
+void cdc_main_died(void);
 
 void cdc_send_ack(void);
 void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module);

@@ -43,6 +43,11 @@ volatile bool _config_save = false;
 const uint32_t _speed_to_br[MTBBUS_SPEEDS] = {38400, 38400, 57600, 115200};
 const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {5, 5, 3, 2}; // in milliseconds
 
+// Send 3 resets in 50 ms interval
+volatile size_t mtbbus_reset_counter = 0;
+#define MTBBUS_RESET_FULL 151
+#define MTBBUS_DO_RESET 50
+
 /* Private function prototypes -----------------------------------------------*/
 
 static void error_handler();
@@ -297,6 +302,17 @@ void TIM3_IRQHandler(void) {
 		}
 	}
 
+	if (mtbbus_reset_counter > 0) {
+		if ((mtbbus_reset_counter % MTBBUS_DO_RESET) == 0) {
+			if (mtbbus_can_send()) {
+				mtbbus_send(0, MTBBUS_CMD_MOSI_RESET_OUTPUTS, NULL, 0);
+				mtbbus_reset_counter--;
+			}
+		} else {
+			mtbbus_reset_counter--;
+		}
+	}
+
 	leds_update_1ms();
 	HAL_TIM_IRQHandler(&h_tim3);
 }
@@ -361,6 +377,10 @@ static inline void poll_usb_tx_flags(void) {
 		cdc_main_send_nocopy(MTBUSB_CMD_MP_ACTIVE_MODULES_LIST, 32);
 		device_usb_tx_req.sep.active_modules = false;
 	}
+}
+
+void cdc_main_died() {
+	mtbbus_reset_counter = MTBBUS_RESET_FULL;
 }
 
 /* MTBbus --------------------------------------------------------------------*/
