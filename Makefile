@@ -1,6 +1,6 @@
 TARGET = mtb-usb-4
 DEBUG = 1
-OPT = -Og
+OPT = -Os
 BUILD_DIR = build
 
 STM32_SRC_PATH = ${STM32_CUBE_PATH}/Drivers/STM32F1xx_HAL_Driver/Src

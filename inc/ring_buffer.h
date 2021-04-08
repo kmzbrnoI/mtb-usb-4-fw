@@ -25,7 +25,7 @@ typedef struct {
  * Empty flag must be set when manipulating with ring buffer!
  */
 
-inline void ring_init(volatile ring_buffer* buf, uint8_t* data, size_t size) {
+static inline void ring_init(volatile ring_buffer* buf, uint8_t* data, size_t size) {
 	buf->ptr_b = 0;
 	buf->ptr_e = 0;
 	buf->empty = true;
@@ -33,32 +33,32 @@ inline void ring_init(volatile ring_buffer* buf, uint8_t* data, size_t size) {
 	buf->size = size;
 }
 
-inline bool ring_full(volatile ring_buffer* buf) {
+static inline bool ring_full(volatile ring_buffer* buf) {
 	return (buf->ptr_b == buf->ptr_e) && (!buf->empty);
 }
 
-inline size_t ring_length(volatile ring_buffer* buf) {
+static inline size_t ring_length(volatile ring_buffer* buf) {
 	return ((buf->ptr_e - buf->ptr_b) % buf->size) + (ring_full(buf) ? buf->size: 0);
 }
 
-inline bool ring_empty(volatile ring_buffer* buf) {
+static inline bool ring_empty(volatile ring_buffer* buf) {
 	return (buf->ptr_b == buf->ptr_e) && (buf->empty);
 }
 
-inline size_t ring_free_space(volatile ring_buffer* buf) {
+static inline size_t ring_free_space(volatile ring_buffer* buf) {
 	return buf->size - ring_length(buf);
 }
 
-inline size_t ring_distance(volatile ring_buffer* buf, size_t first, size_t second) {
+static inline size_t ring_distance(volatile ring_buffer* buf, size_t first, size_t second) {
 	return (second-first) % buf->size;
 }
 
-inline void ring_clear(volatile ring_buffer* buf) {
+static inline void ring_clear(volatile ring_buffer* buf) {
 	buf->ptr_b = buf->ptr_e;
 	buf->empty = true;
 }
 
-inline bool ring_add_byte(volatile ring_buffer* buf, uint8_t data) {
+static inline bool ring_add_byte(volatile ring_buffer* buf, uint8_t data) {
 	if (ring_full(buf))
 		return false;
 
@@ -68,7 +68,7 @@ inline bool ring_add_byte(volatile ring_buffer* buf, uint8_t data) {
 	return true;
 }
 
-inline bool ring_add_bytes(volatile ring_buffer* buf, uint8_t* data, size_t size) {
+static inline bool ring_add_bytes(volatile ring_buffer* buf, uint8_t* data, size_t size) {
 	if (ring_free_space(buf) < size)
 		return false;
 
@@ -79,7 +79,7 @@ inline bool ring_add_bytes(volatile ring_buffer* buf, uint8_t* data, size_t size
 	return true;
 }
 
-inline uint8_t ring_remove_byte(volatile ring_buffer* buf) {
+static inline uint8_t ring_remove_byte(volatile ring_buffer* buf) {
 	uint8_t result;
 	result = buf->data[buf->ptr_b];
 	buf->ptr_b = (buf->ptr_b + 1) % buf->size;
@@ -88,11 +88,11 @@ inline uint8_t ring_remove_byte(volatile ring_buffer* buf) {
 	return result;
 }
 
-inline uint8_t ring_get_byte_begin(volatile ring_buffer* buf, size_t offset) {
+static inline uint8_t ring_get_byte_begin(volatile ring_buffer* buf, size_t offset) {
 	return buf->data[(buf->ptr_b + offset) % buf->size];
 }
 
-inline void ring_move_begin(volatile ring_buffer* buf, size_t count) {
+static inline void ring_move_begin(volatile ring_buffer* buf, size_t count) {
 	if (count > ring_length(buf))
 		count = ring_length(buf);
 	buf->ptr_b = (buf->ptr_b + count) % buf->size;
@@ -100,12 +100,12 @@ inline void ring_move_begin(volatile ring_buffer* buf, size_t count) {
 		buf->empty = true;
 }
 
-inline void ring_serialize(volatile ring_buffer* buf, uint8_t* out, size_t start, size_t length) {
+static inline void ring_serialize(volatile ring_buffer* buf, uint8_t* out, size_t start, size_t length) {
 	for (size_t i = 0; i < length; i++)
 		out[i] = buf->data[(start + i) % buf->size];
 }
 
-inline void ring_remove_frame(volatile ring_buffer* buf, size_t count) {
+static inline void ring_remove_frame(volatile ring_buffer* buf, size_t count) {
 	if (count > ring_length(buf))
 		count = ring_length(buf);
 	buf->ptr_b = (buf->ptr_b + count) % buf->size;
