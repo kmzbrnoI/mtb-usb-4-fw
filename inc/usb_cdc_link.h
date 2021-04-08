@@ -40,6 +40,8 @@ bool cdc_main_send_nocopy(uint8_t command_code, size_t datasize);
 void cdc_send_ack(void);
 void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module);
 
+int cdc_debug_send(uint8_t *data, size_t datasize);
+
 #define MTBUSB_CMD_PM_FORWARD 0x10
 #define MTBUSB_CMD_PM_INFO_REQ 0x20
 #define MTBUSB_CMD_PM_CHANGE_SPEED 0x21

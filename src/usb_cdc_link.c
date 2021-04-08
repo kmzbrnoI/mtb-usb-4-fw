@@ -506,6 +506,8 @@ void USB_LP_IRQ_HANDLER(void) {
 	usbd_poll(&udev);
 }
 
+/* Main CDC ------------------------------------------------------------------*/
+
 static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep) {
 	if (event != usbd_evt_eprx)
 		return;
@@ -604,4 +606,20 @@ void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module) {
 	uint8_t buf[3] = {error_code, command_code, module};
 	if (cdc_main_can_send())
 		cdc_main_send_copy(MTBUSB_CMD_MP_ERROR, buf, 3);
+}
+
+/* Debug CDC -----------------------------------------------------------------*/
+
+int cdc_debug_send(uint8_t *data, size_t datasize) {
+	if (!enableDebugEp)
+		return 1;
+
+	usbd_ep_write(&udev, CDC_DEBUG_TXD_EP, data,
+	              (datasize < CDC_DATA_SZ) ? datasize : CDC_DATA_SZ);
+	return 0;
+}
+
+int _write(int fd, char* data, int len) {
+	// Warning: can send max 64 bytes of data
+	return cdc_debug_send((uint8_t*)data, len);
 }
