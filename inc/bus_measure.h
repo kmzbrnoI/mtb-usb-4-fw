@@ -2,4 +2,4 @@
 
 #include <stdbool.h>
 
-bool i2c_init(void);
+bool bus_measure_init(void);

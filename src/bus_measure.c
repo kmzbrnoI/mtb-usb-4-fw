@@ -1,10 +1,14 @@
 #include "stm32f1xx_hal.h"
-#include "i2c.h"
+#include "bus_measure.h"
 #include "gpio.h"
+#include "adafruit_ina219.h"
 
 I2C_HandleTypeDef hi2c1;
 
-bool i2c_init(void) {
+bool bus_measure_init(void) {
+	__HAL_AFIO_REMAP_I2C1_ENABLE();
+	__HAL_RCC_I2C1_CLK_ENABLE();
+
 	hi2c1.Instance = I2C1;
 	hi2c1.Init.ClockSpeed = 100000;
 	hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
@@ -20,8 +24,8 @@ bool i2c_init(void) {
 	gpio_pin_init(pin_i2c_scl, GPIO_MODE_AF_OD, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, false);
 	gpio_pin_init(pin_i2c_sda, GPIO_MODE_AF_OD, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, false);
 
-	__HAL_AFIO_REMAP_I2C1_ENABLE();
-	__HAL_RCC_I2C1_CLK_ENABLE();
+	NVIC_EnableIRQ(I2C1_EV_IRQn);
+	ina219_setCalibration_16V_400mA();
 
 	return true;
 }

@@ -94,8 +94,6 @@ float ina219_getShuntVoltage_mV(void);
 float ina219_getCurrent_mA(void);
 float ina219_getPower_mW(void);
 
-void ina219_wireWriteRegister(uint8_t reg, uint16_t value);
-void ina219_wireReadRegister(uint8_t reg, uint16_t *value);
 int16_t ina219_getBusVoltage_raw(void);
 int16_t ina219_getShuntVoltage_raw(void);
 int16_t ina219_getCurrent_raw(void);
@@ -104,5 +102,7 @@ int ina219_contMeasureInit(uint8_t reg);
 float ina219_convertMeasure(int rawValue);
 int ina219_contMeasureUpdate(void);
 int ina219_getNSamples(void);
+
+void ina219_startMeasure(void);
 
 #endif

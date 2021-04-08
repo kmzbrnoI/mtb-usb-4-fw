@@ -37,8 +37,8 @@ extern I2C_HandleTypeDef hi2c1;
 // values to mA and mW, taking into account the current config settings
 uint32_t ina219_currentDivider_mA;
 uint32_t ina219_powerMultiplier_mW;
-
 uint32_t ina219_calValue;
+uint16_t ina219_config = 0;
 
 #define BUFFERLEN 4096
 int16_t contBuffer[BUFFERLEN];
@@ -61,6 +61,18 @@ void _wireReadRegister(uint8_t reg, uint16_t *value) {
 	HAL_I2C_Mem_Read(&hi2c1, INA219_ADDRESS<<1, (uint16_t)reg, 1,i2c_temp, 2, 0xffffffff);
 	HAL_Delay(1);
 	*value = ((uint16_t)i2c_temp[0]<<8 )|(uint16_t)i2c_temp[1];
+}
+
+void I2C1_EV_IRQHandler() {
+	HAL_I2C_EV_IRQHandler(&hi2c1);
+}
+
+void ina219_startMeasure(void) {
+	// Start measure = write to config register
+	static uint8_t i2c_temp[2];
+	i2c_temp[0] = ina219_config >> 8;
+	i2c_temp[1] = ina219_config;
+	HAL_I2C_Mem_Write_IT(&hi2c1, INA219_ADDRESS<<1, INA219_REG_CONFIG, 1, i2c_temp, 2);
 }
 
 /**************************************************************************/
@@ -145,12 +157,12 @@ void ina219_setCalibration_32V_2A(void) {
 	_wireWriteRegister(INA219_REG_CALIBRATION, ina219_calValue);
 
 	// Set Config register to take into account the settings above
-	uint16_t config = INA219_CONFIG_BVOLTAGERANGE_32V |
-	                  INA219_CONFIG_GAIN_8_320MV |
-	                  INA219_CONFIG_BADCRES_12BIT |
-	                  INA219_CONFIG_SADCRES_12BIT_1S_532US |
-	                  INA219_CONFIG_MODE_SANDBVOLT_CONTINUOUS;
-	_wireWriteRegister(INA219_REG_CONFIG, config);
+	ina219_config = INA219_CONFIG_BVOLTAGERANGE_32V |
+	                INA219_CONFIG_GAIN_8_320MV |
+	                INA219_CONFIG_BADCRES_12BIT |
+	                INA219_CONFIG_SADCRES_12BIT_1S_532US |
+	                INA219_CONFIG_MODE_SANDBVOLT_CONTINUOUS;
+	_wireWriteRegister(INA219_REG_CONFIG, ina219_config);
 }
 
 /**************************************************************************/
@@ -237,12 +249,12 @@ void ina219_setCalibration_32V_1A(void) {
 	_wireWriteRegister(INA219_REG_CALIBRATION, ina219_calValue);
 
 	// Set Config register to take into account the settings above
-	uint16_t config = INA219_CONFIG_BVOLTAGERANGE_32V |
-	                  INA219_CONFIG_GAIN_8_320MV |
-	                  INA219_CONFIG_BADCRES_12BIT |
-	                  INA219_CONFIG_SADCRES_12BIT_1S_532US |
-	                  INA219_CONFIG_MODE_SANDBVOLT_CONTINUOUS;
-	_wireWriteRegister(INA219_REG_CONFIG, config);
+	ina219_config = INA219_CONFIG_BVOLTAGERANGE_32V |
+	                INA219_CONFIG_GAIN_8_320MV |
+	                INA219_CONFIG_BADCRES_12BIT |
+	                INA219_CONFIG_SADCRES_12BIT_1S_532US |
+	                INA219_CONFIG_MODE_SANDBVOLT_CONTINUOUS;
+	_wireWriteRegister(INA219_REG_CONFIG, ina219_config);
 }
 
 /**************************************************************************/
@@ -327,12 +339,12 @@ void ina219_setCalibration_16V_400mA(void) {
 	_wireWriteRegister(INA219_REG_CALIBRATION, ina219_calValue);
 
 	// Set Config register to take into account the settings above
-	uint16_t config = INA219_CONFIG_BVOLTAGERANGE_16V |
-	                  INA219_CONFIG_GAIN_1_40MV |
-	                  INA219_CONFIG_BADCRES_12BIT |
-	                  INA219_CONFIG_SADCRES_12BIT_1S_532US |
-	                  INA219_CONFIG_MODE_SANDBVOLT_CONTINUOUS;
-	_wireWriteRegister(INA219_REG_CONFIG, config);
+	ina219_config = INA219_CONFIG_BVOLTAGERANGE_16V |
+	                INA219_CONFIG_GAIN_1_40MV |
+	                INA219_CONFIG_BADCRES_12BIT |
+	                INA219_CONFIG_SADCRES_10BIT_1S_148US |
+	                INA219_CONFIG_MODE_SANDBVOLT_TRIGGERED;
+	_wireWriteRegister(INA219_REG_CONFIG, ina219_config);
 }
 
 
@@ -390,7 +402,7 @@ int16_t ina219_getCurrent_raw() {
     @return raw power reading
 */
 /**************************************************************************/
-int16_t iona219_getPower_raw() {
+int16_t ina219_getPower_raw() {
 	uint16_t value;
 
 	// Sometimes a sharp load will reset the INA219, which will
