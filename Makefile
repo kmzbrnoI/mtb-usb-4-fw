@@ -42,12 +42,14 @@ PREFIX = arm-none-eabi-
 ifdef GCC_PATH
 CC = $(GCC_PATH)/$(PREFIX)gcc
 CPP = $(GCC_PATH)/$(PREFIX)g++
+LD = $(GCC_PATH)/$(PREFIX)gcc
 AS = $(GCC_PATH)/$(PREFIX)g++ -x assembler-with-cpp
 CP = $(GCC_PATH)/$(PREFIX)objcopy
 SZ = $(GCC_PATH)/$(PREFIX)size
 else
 CC = $(PREFIX)gcc
 CPP = $(PREFIX)g++
+LD = $(PREFIX)gcc
 AS = $(PREFIX)g++ -x assembler-with-cpp
 CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
@@ -136,7 +138,7 @@ $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	$(AS) -c $(ASFLAGS) $< -o $@
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
-	$(CPP) $(OBJECTS) $(LDFLAGS) -o $@
+	$(LD) $(OBJECTS) $(LDFLAGS) -o $@
 	$(SZ) $@
 
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
