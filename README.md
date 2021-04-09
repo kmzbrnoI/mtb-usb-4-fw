@@ -1,36 +1,65 @@
-# MTB-USB v4 Firmware
+MTB-USB v4 Firmware
+===================
 
-## Toolchain
+This repository contains firmware for main MCU STM32F103 of MTB-USB v4 module.
+MTB-USB module is a master module of MTBbus.
 
-Flash:
+## Module functionality
 
-```bash
-$ # LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/
-$ st-flash --reset write build/mtb-usb-4.bin 0x08000000
-```
+ * Retransmit data between MTBbus and USB (PC).
+ * Do MTBbus (RS485) time-critical operations.
+ * Periodically poll MTBbus modules to let them report events.
+ * Maintain list of active & inactive modules. Poll active modules frequently,
+   poll rest of the modules less frequently to allow to find new modules.
+ * Check if module responds to inquiry. When no response is get multiple times,
+   report module as failed
+ * Behaves as CDC in PC.
 
-Debug:
+## LEDs behavior
 
-```bash
-$ openocd
-$ arm-none-eabi-gdb build/mtb-usb-4.elf
-(gdb) target extended-remote :3333
-(gdb) b main
-```
+ * Red led: bad checksum of mtbbus received.
+ * Yellow led: USB send traffic.
+   - Permanently on: computer does not read from USB CDC.
+   - Permanently off: computer reads CDC, no data are sent.
+   - Flashing: computer reads CDC, data are sent to computer.
+ * Green led: MTBbus activity: polling MTBbus modules.
+ * Blue led left: no meaning yet.
+ * Blue led right: MTBbus powered.
 
-Read serial in linux:
+## Build & requirements
 
-```bash
-$ stty -F /dev/ttyACM0 raw
-$ xxd /dev/ttyACM0
-```
+ * Development:
+   - `arm-none-eabi-gcc`
+   - `make`
+     ```bash
+     $ make
+     ```
 
-Send to serial:
+ * Debugging:
+   - `openocd`
+   - `arm-none-eabi-gdb`
+     ```bash
+     $ openocd
+     $ arm-none-eabi-gdb build/mtb-usb-4.elf
+     (gdb) target extended-remote :3333
+     (gdb) b main
+     ```
 
-```bash
-$ echo -ne '\x2A\x42\x03\x10\x01\x02' > /dev/ttyACM0 # module 1 info request
-$ echo -ne '\x2A\x42\x01\x20' > /dev/ttyACM0 # active modules request
-$ echo -ne '\x2A\x42\x07\x10\x01\x11\x00\x00\x00\x03' > /dev/ttyACM0 # set outputs of module 1 to 0x0003
-$ echo -ne '\x2A\x42\x04\x10\x01\xe0\x02' > /dev/ttyACM0 # change module 1 speed
-$ echo -ne '\x2A\x42\x02\x21\x02' > /dev/ttyACM0 # change MTB-USB speed
-```
+ * Flashing:
+   - `st-flash` (via STlink)
+      MTB-USB module contains programming connector. Use STlink to program the MCU.
+     ```bash
+     $ st-flash --reset write build/mtb-usb-4.bin 0x08000000
+     ```
+
+## References
+
+ * [MTB-USB v4 PCB](https://github.com/kmzbrnoI/mtb-usb-4-pcb)
+ * [MTBbus protocol](https://github.com/kmzbrnoI/mtbbus-protocol)
+ * [PC – MTB-USB module protocol](https://github.com/kmzbrnoI/mtbbus-protocol/tree/master/pc)
+ * [MTB project (in czech only)](https://mtb.kmz-brno.cz/)
+
+## License
+
+This application is released under the [Apache License v2.0
+](https://www.apache.org/licenses/LICENSE-2.0).
