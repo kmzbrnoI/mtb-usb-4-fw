@@ -1,6 +1,5 @@
 // Implements USB CDC using libusb_stm
 
-#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include "usb_cdc_link.h"
@@ -352,15 +351,6 @@ static usbd_respond cdc_getdesc(
 	return usbd_ack;
 };
 
-/*static void main_check_for_dfu_request(const struct usb_cdc_line_coding* coding) {
-#ifdef RBCX_SBOOT
-	if (coding->dwDTERate == 12345 && coding->bParityType == USB_CDC_EVEN_PARITY
-		&& coding->bCharFormat == USB_CDC_2_STOP_BITS) {
-		rebootToDfu();
-	}
-#endif
-}*/
-
 static usbd_respond cdc_control_main(usbd_device* dev, usbd_ctlreq* req) {
 	switch (req->bRequest) {
 	case USB_CDC_SET_CONTROL_LINE_STATE: {
@@ -469,18 +459,18 @@ void cdc_init() {
 	uid[1] = HAL_GetUIDw1();
 	uid[2] = HAL_GetUIDw2();
 
-	char buf[9];
 	size_t sn_off = 0;
 	for (size_t i = 0; i < 3; i++) {
-		snprintf(buf, sizeof(buf), "%08lx", uid[i]);
-		for (int i = 0; i < 8; ++i)
-			serial_number_desc_en.wString[sn_off++] = buf[i];
+		for (int j = 7; j >= 0; --j) {
+			char c;
+			size_t num = ((uid[i] >> (4*j)) & 0xF);
+			if (num < 0xA)
+				c = '0'+num;
+			else
+				c = 'A'+num-10;
+			serial_number_desc_en.wString[sn_off++] = c;
+		}
 	}
-
-	// reinit button and check
-	// for (volatile int i = 0; i < 5000; ++i);
-	// pinInit(button3Pin, GPIO_MODE_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_LOW, true);
-	// enableDebugEp = !pinRead(button3Pin) || (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk);
 
 	if (enableDebugEp) {
 		config_desc.config.bNumInterfaces = INTERFACE_COUNT_ALL;
