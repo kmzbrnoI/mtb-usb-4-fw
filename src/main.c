@@ -369,8 +369,8 @@ static inline void poll_usb_tx_flags(void) {
 	if (device_usb_tx_req.sep.ack) {
 		cdc_send_ack();
 		device_usb_tx_req.sep.ack = false;
-	}
-	if (device_usb_tx_req.sep.info) {
+
+	} else if (device_usb_tx_req.sep.info) {
 		cdc_tx.separate.data[0] = MTBUSB_TYPE;
 		cdc_tx.separate.data[1] = config.mtbbus_speed;
 		cdc_tx.separate.data[2] = FW_VER_MAJOR;
@@ -380,15 +380,15 @@ static inline void poll_usb_tx_flags(void) {
 
 		cdc_main_send_nocopy(MTBUSB_CMD_MP_INFO, 6);
 		device_usb_tx_req.sep.info = false;
-	}
-	if (device_usb_tx_req.sep.active_modules) {
+
+	} else if (device_usb_tx_req.sep.active_modules) {
 		for (size_t i = 0; i < 32; i++)
 			cdc_tx.separate.data[i] = modules_active[i/4] >> (8*(i%4));
 
 		cdc_main_send_nocopy(MTBUSB_CMD_MP_ACTIVE_MODULES_LIST, 32);
 		device_usb_tx_req.sep.active_modules = false;
-	}
-	if (device_usb_tx_req.sep.full_buffer) {
+
+	} else if (device_usb_tx_req.sep.full_buffer) {
 		cdc_send_error(MTBUSB_ERROR_FULL_BUFFER, _error_full_buffer_command_code, _error_full_buffer_module_addr);
 		device_usb_tx_req.sep.full_buffer = false;
 	}
@@ -418,24 +418,21 @@ static inline void mtbbus_poll_rx_flags(void) {
 		forward_mtbbus_received_to_usb();
 		mtbbus_message_processed();
 		mtbbus_rx_flags.sep.received = false;
-	}
 
-	if (mtbbus_rx_flags.sep.timeout_pc) {
+	} else if (mtbbus_rx_flags.sep.timeout_pc) {
 		if (mtbbus_resent_times == MTBBUS_SEND_ATTEMPTS) {
 			cdc_send_error(MTBUSB_ERROR_NO_RESPONSE, mtbbus_command_code, mtbbus_addr);
 			mtbbus_message_processed();
 		}
 		mtbbus_rx_flags.sep.timeout_pc = false;
-	}
 
-	if (mtbbus_rx_flags.sep.timeout_inquiry) {
+	} else if (mtbbus_rx_flags.sep.timeout_inquiry) {
 		cdc_tx.separate.data[0] = mtbbus_addr;
 		cdc_tx.separate.data[1] = module_get_attempts(mtbbus_addr);
 		cdc_main_send_nocopy(MTBUSB_CMD_MP_MODULE_FAILED, 2);
 		mtbbus_rx_flags.sep.timeout_inquiry = false;
-	}
 
-	if (mtbbus_rx_flags.sep.discovered) {
+	} else if (mtbbus_rx_flags.sep.discovered) {
 		cdc_tx.separate.data[0] = mtbbus_addr;
 		cdc_main_send_nocopy(MTBUSB_CMD_MP_NEW_MODULE, 1);
 		mtbbus_rx_flags.sep.discovered = false;
