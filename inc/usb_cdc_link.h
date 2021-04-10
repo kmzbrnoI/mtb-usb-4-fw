@@ -1,3 +1,5 @@
+/* USB CDC implementation. */
+
 #pragma once
 
 #include "stm32.h"

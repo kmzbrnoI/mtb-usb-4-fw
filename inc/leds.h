@@ -1,3 +1,10 @@
+/* Blinking with LEDs: call to ‹led_activate› activates LED for millis_enable
+ * milliseconds and then keep it disabled for millis_disable millisenconds.
+ * This function could be called faster (e.g. when processing data etc.), but
+ * LED will never blink as fast as data arrive. Aim of this code is for LEDs
+ * blinking to be human-readable.
+ */
+
 #pragma once
 
 #include <stdint.h>

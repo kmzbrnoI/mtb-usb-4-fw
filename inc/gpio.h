@@ -1,3 +1,5 @@
+/* Low-level GPIO functions, pin definitions. */
+
 #pragma once
 
 #include <stdbool.h>

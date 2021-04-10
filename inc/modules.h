@@ -1,3 +1,8 @@
+/* Storage of MTBbus slave modules data:
+ *  - which modules are active
+ *  - how many inquiry attempts are left for each module to consider it failed
+ */
+
 #pragma once
 
 #include <stdbool.h>

@@ -1,3 +1,5 @@
+/* Common definitions & constants for whole MTB-USB board */
+
 #pragma once
 
 #define MTBUSB_TYPE 0x01

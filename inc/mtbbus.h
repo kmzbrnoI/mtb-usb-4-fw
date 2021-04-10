@@ -1,4 +1,4 @@
-/* MTBbus communiation API
+/* MTBbus communiation library
  * This library reports events in ‹mtbbus_rx_flags› union. User should poll
  * these flags and reset them when events are processed. Before flags are cleared,
  * ‹mtbbus_can_send› returns false, so no new commands could be sent to MTBbus
