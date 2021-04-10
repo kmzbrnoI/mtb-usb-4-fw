@@ -518,22 +518,29 @@ static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep) {
 	rx.pos += usbd_ep_read(dev, ep, &rx.fifo[rx.pos], CDC_DATA_SZ);
 
 	if (rx.pos >= 3) {
-		if ((rx.fifo[0] != 0x2A) || (rx.fifo[1] != 0x42)) {
-			rx.pos = 0;
-			return;
-		}
-		uint8_t length = rx.fifo[2];
-		if (length > 123) { // invalid data
-			rx.pos = 0;
-			return;
-		}
-		if (rx.pos >= length+3) {
-			if (cdc_main_received != NULL)
-				cdc_main_received(rx.fifo[3], &rx.fifo[4], length-1);
-			rx.pos = 0;
-		}
+		size_t msg_begin_pos = 0;
+		size_t msg_length;
+		do {
+			if ((rx.fifo[msg_begin_pos] != 0x2A) || (rx.fifo[msg_begin_pos+1] != 0x42)) {
+				rx.pos = 0;
+				return;
+			}
+			msg_length = rx.fifo[msg_begin_pos+2];
+			if (msg_length > 123) { // invalid data
+				rx.pos = 0;
+				return;
+			}
+			if (rx.pos-msg_begin_pos >= msg_length+3) {
+				if (cdc_main_received != NULL)
+					cdc_main_received(rx.fifo[msg_begin_pos+3], &rx.fifo[msg_begin_pos+4], msg_length-1);
+				msg_begin_pos += msg_length+3;
+			}
+		} while (rx.pos-msg_begin_pos >= msg_length+3);
 
-		// TODO: check if rest of the incoming data contains more messages
+		// move last unfinished message to begin of buffer
+		for (size_t i = 0; i < rx.pos-msg_begin_pos; i++)
+			rx.fifo[i] = rx.fifo[i+msg_begin_pos];
+		rx.pos = rx.pos-msg_begin_pos;
 	}
 }
 
