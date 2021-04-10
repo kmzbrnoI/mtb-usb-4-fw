@@ -61,7 +61,6 @@ static void error_handler();
 static void init(void);
 static bool clock_init(void);
 static bool debug_uart_init(void);
-void usb_received(uint8_t command_code, uint8_t *data, size_t data_size);
 void forward_mtbbus_received_to_usb();
 static inline void mtbbus_poll_rx_flags(void);
 static void ring_usb_to_mtbbus_poll(void);
@@ -111,7 +110,6 @@ void init(void) {
 		error_handler();
 
 	cdc_init();
-	cdc_main_received = usb_received;
 
 	debug_uart_init();
 	modules_init();
@@ -328,7 +326,7 @@ void TIM3_IRQHandler(void) {
 
 /* USB -----------------------------------------------------------------------*/
 
-void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
+void cdc_main_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 	if ((command_code == MTBUSB_CMD_PM_FORWARD) && (data_size >= 2)) {
 		if (ring_free_space(&ring_usb_to_mtbbus) < data_size+1) {
 			device_usb_tx_req.sep.full_buffer = true;

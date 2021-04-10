@@ -31,7 +31,8 @@ typedef union {
 extern CdcTxData cdc_tx;
 extern volatile bool cdc_dtr_ready; // if computer reads data
 
-extern void (*cdc_main_received)(uint8_t command_code, uint8_t *data, size_t data_size);
+// Events:
+void cdc_main_received(uint8_t command_code, uint8_t *data, size_t data_size);
 
 void cdc_init();
 bool cdc_is_debug_ep_enabled();

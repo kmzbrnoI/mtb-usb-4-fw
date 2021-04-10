@@ -22,7 +22,6 @@ struct {
 } tx;
 
 CdcTxData cdc_tx;
-void (*cdc_main_received)(uint8_t command_code, uint8_t *data, size_t data_size);
 
 bool _cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize, bool copy);
 
@@ -531,8 +530,7 @@ static void main_cdc_rx(usbd_device *dev, uint8_t event, uint8_t ep) {
 				return;
 			}
 			if (rx.pos-msg_begin_pos >= msg_length+3) {
-				if (cdc_main_received != NULL)
-					cdc_main_received(rx.fifo[msg_begin_pos+3], &rx.fifo[msg_begin_pos+4], msg_length-1);
+				cdc_main_received(rx.fifo[msg_begin_pos+3], &rx.fifo[msg_begin_pos+4], msg_length-1);
 				msg_begin_pos += msg_length+3;
 			}
 		} while (rx.pos-msg_begin_pos >= msg_length+3);
