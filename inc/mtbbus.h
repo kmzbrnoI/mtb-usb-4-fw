@@ -18,6 +18,7 @@
 #define MTBBUS_OUT_BUF_SIZE 128
 #define MTBBUS_IN_BUF_SIZE 128
 
+// Received flags (should be polled and reset when data are read):
 typedef union {
 	size_t all;
 	struct {
@@ -28,6 +29,7 @@ typedef union {
 	} sep;
 } MtbBusRxFlags;
 
+// These variables store last received data from slave module:
 extern volatile MtbBusRxFlags mtbbus_rx_flags;
 extern uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
 extern volatile size_t mtbbus_addr;
