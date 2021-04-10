@@ -57,3 +57,4 @@ int cdc_debug_send(uint8_t *data, size_t datasize);
 #define MTBUSB_CMD_MP_MODULE_FAILED 0x24
 
 #define MTBUSB_ERROR_NO_RESPONSE 0x01
+#define MTBUSB_ERROR_FULL_BUFFER 0x02

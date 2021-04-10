@@ -26,8 +26,12 @@ typedef union {
 		bool ack :1;
 		bool info: 1;
 		bool active_modules :1;
+		bool full_buffer :1;
 	} sep;
 } DeviceUsbTxReq;
+
+volatile uint8_t _error_full_buffer_command_code;
+volatile uint8_t _error_full_buffer_module_addr;
 
 volatile DeviceUsbTxReq device_usb_tx_req;
 volatile uint32_t _speed_change_req = 0;
@@ -327,7 +331,9 @@ void TIM3_IRQHandler(void) {
 void usb_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 	if ((command_code == MTBUSB_CMD_PM_FORWARD) && (data_size >= 2)) {
 		if (ring_free_space(&ring_usb_to_mtbbus) < data_size+1) {
-			// TODO send full buffer error
+			device_usb_tx_req.sep.full_buffer = true;
+			_error_full_buffer_command_code = data[1];
+			_error_full_buffer_module_addr = data[0];
 			return;
 		}
 
@@ -381,6 +387,10 @@ static inline void poll_usb_tx_flags(void) {
 
 		cdc_main_send_nocopy(MTBUSB_CMD_MP_ACTIVE_MODULES_LIST, 32);
 		device_usb_tx_req.sep.active_modules = false;
+	}
+	if (device_usb_tx_req.sep.full_buffer) {
+		cdc_send_error(MTBUSB_ERROR_FULL_BUFFER, _error_full_buffer_command_code, _error_full_buffer_module_addr);
+		device_usb_tx_req.sep.full_buffer = false;
 	}
 }
 
