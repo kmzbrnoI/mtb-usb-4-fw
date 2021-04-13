@@ -125,8 +125,8 @@ void init(void) {
 	_inq_period_max = _speed_to_inq_period[config.mtbbus_speed];
 	if (!mtbbus_init(_speed_to_br[config.mtbbus_speed]))
 		error_handler();
-	if (!bus_measure_init())
-		error_handler();
+	/*if (!bus_measure_init())
+		error_handler();*/
 
 	cdc_init();
 
@@ -310,8 +310,8 @@ void TIM2_IRQHandler(void) {
 
 void TIM3_IRQHandler(void) {
 	// Timer 3 @ 1 ms (1 kHz)
-	static size_t busmeasure_counter = 0;
-	#define BUSMEASURE_TICKS 50
+	/*static size_t busmeasure_counter = 0;
+	#define BUSMEASURE_TICKS 50*/
 
 	_inq_period_counter++;
 	if (_inq_period_counter >= _inq_period_max) {
@@ -319,11 +319,11 @@ void TIM3_IRQHandler(void) {
 		if (mtbbus_can_send() && (!ring_usb_to_mtbbus_message_ready()) && (_speed_change_req == 0)) {
 			mtbbus_modules_inquiry();
 
-			busmeasure_counter++;
+			/*busmeasure_counter++;
 			if (busmeasure_counter == BUSMEASURE_TICKS) {
 				busmeasure_counter = 0;
 				ina219_startMeasure();
-			}
+			}*/
 			led_activate(pin_led_green, 50, 50);
 		}
 	}
