@@ -135,12 +135,21 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 	if (huart->Instance == USART3) {
 		gpio_pin_write(pin_usart_mtb_dir, false);
 
-		// read just a single byte in DMA mode (first byte contains number of bytes following)
-		_response_counter = RESPONSE_COUNTER_FULL;
-		_receiving_first = true;
-		_sending = false;
 		HAL_UART_DMAStop(&_h_uart_mtbbus);
-		HAL_UART_Receive_DMA(&_h_uart_mtbbus, (uint8_t*)mtbbus_received_data, 1);
+		_sending = false;
+
+		if (mtbbus_addr != 0) {
+			// read just a single byte in DMA mode (first byte contains number of bytes following)
+			_response_counter = RESPONSE_COUNTER_FULL;
+			_receiving_first = true;
+			HAL_UART_Receive_DMA(&_h_uart_mtbbus, (uint8_t*)mtbbus_received_data, 1);
+		} else {
+			// Broadcast → simulate module 0 sent ACK
+			_rx_interrupt_disable();
+			mtbbus_received_data[0] = 1;
+			mtbbus_received_data[1] = MTBBUS_CMD_MISO_ACK;
+			mtbbus_rx_flags.sep.received = true;
+		}
 	}
 }
 
