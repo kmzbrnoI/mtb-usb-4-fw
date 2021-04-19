@@ -31,7 +31,7 @@ volatile size_t _receiving = 0; // 0 = not receiving, 1..RECEIGIN_UPDATE_TIMEOUT
 volatile bool _sending = false;
 volatile size_t _response_counter = 0;
 
-#define RESPONSE_COUNTER_FULL 4 // 200 us
+#define RESPONSE_COUNTER_FULL 5 // 250 us
 #define RECEIVING_UPDATE_TIMEOUT 1000 // 50 ms
 
 /* Higher-level data structures ----------------------------------------------*/
