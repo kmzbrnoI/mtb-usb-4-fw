@@ -189,6 +189,7 @@ static inline void _message_received() {
 
 void _message_timeout() {
 	HAL_UART_DMAStop(&_h_uart_mtbbus);
+	_rx_interrupt_disable();
 	_receiving_first = false;
 	if (_inquiry_module == 0)
 		mtbbus_rx_flags.sep.timeout_pc = true;
@@ -201,9 +202,8 @@ void EXTI15_10_IRQHandler(void) {
 		if (_response_counter > 0) {
 			_receiving = RECEIVING_UPDATE_TIMEOUT;
 			_response_counter = 0;
+			_rx_interrupt_disable();
 		}
-		_response_counter = 0;
-		_rx_interrupt_disable();
 		HAL_GPIO_EXTI_IRQHandler(pin_usart_mtb_rx.pin);
 	}
 }
