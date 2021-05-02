@@ -206,6 +206,7 @@ bool clock_init(void) {
 	if (HAL_TIMEx_MasterConfigSynchronization(&h_tim2, &sMasterConfig) != HAL_OK)
 		return false;
 
+	HAL_NVIC_SetPriority(TIM2_IRQn, 8, 0);
 	HAL_NVIC_EnableIRQ(TIM2_IRQn);
 
 	// Timer 3 @ 1 ms
@@ -227,6 +228,7 @@ bool clock_init(void) {
 	if (HAL_TIMEx_MasterConfigSynchronization(&h_tim3, &sMasterConfig) != HAL_OK)
 		return false;
 
+	HAL_NVIC_SetPriority(TIM3_IRQn, 8, 0);
 	HAL_NVIC_EnableIRQ(TIM3_IRQn);
 
 	return true;

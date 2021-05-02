@@ -19,7 +19,7 @@ const unsigned _uart_tx_dma_irq_prio = 8;
 const IRQn_Type _uart_rx_dma_irqn = DMA1_Channel3_IRQn;
 const unsigned _uart_rx_dma_irq_prio = 8;
 const IRQn_Type _uart_irqn = USART3_IRQn;
-const unsigned _uart_irq_prio = 10;
+const unsigned _uart_irq_prio = 8;
 DMA_Channel_TypeDef* const _uart_tx_dma_channel = DMA1_Channel2;
 DMA_Channel_TypeDef* const _uart_rx_dma_channel = DMA1_Channel3;
 
@@ -28,7 +28,7 @@ DMA_Channel_TypeDef* const _uart_rx_dma_channel = DMA1_Channel3;
 uint16_t _out_buf[MTBBUS_OUT_BUF_SIZE];
 uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
 volatile bool _receiving_first = false;
-volatile size_t _receiving = 0; // 0 = not receiving, 1..RECEIGIN_UPDATE_TIMEOUT = receiving
+volatile size_t _receiving = 0; // 0 = not receiving, 1..RECEIVING_UPDATE_TIMEOUT = receiving
 volatile bool _sending = false;
 volatile size_t _response_counter = 0;
 
@@ -106,6 +106,9 @@ bool mtbbus_init(uint32_t speed) {
 	gpio_pin_init(pin_usart_mtb_tx, GPIO_MODE_AF_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH, false);
 	gpio_pin_init(pin_usart_mtb_rx, GPIO_MODE_IT_FALLING, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, true);
 	gpio_pin_init(pin_usart_mtb_dir, GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW, false);
+
+	// Lower ext interrupt priority to same priority as others to avoid deadlocks
+	HAL_NVIC_SetPriority(EXTI15_10_IRQn, _uart_irq_prio, 0);
 
 	return true;
 }
