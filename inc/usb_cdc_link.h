@@ -50,6 +50,7 @@ int cdc_debug_send(uint8_t *data, size_t datasize);
 #define MTBUSB_CMD_PM_INFO_REQ 0x20
 #define MTBUSB_CMD_PM_CHANGE_SPEED 0x21
 #define MTBUSB_CMD_PM_ACTIVE_MODULES_REQ 0x22
+#define MTBUSB_CMD_PM_PING 0x30
 
 #define MTBUSB_CMD_MP_ACK 0x01
 #define MTBUSB_CMD_MP_ERROR 0x02

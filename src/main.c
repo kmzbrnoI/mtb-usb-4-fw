@@ -376,6 +376,10 @@ void cdc_main_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 
 	} else if (command_code == MTBUSB_CMD_PM_ACTIVE_MODULES_REQ) {
 		device_usb_tx_req.sep.active_modules = true;
+
+	} else if (command_code == MTBUSB_CMD_PM_PING) {
+		device_usb_tx_req.sep.ack = true;
+
 	}
 }
 
