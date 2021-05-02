@@ -5,6 +5,7 @@
 #include "gpio.h"
 #include "crc16modbus.h"
 #include "modules.h"
+#include "leds.h"
 
 /* Low-level UART handler, interrupts etc. -----------------------------------*/
 
@@ -304,6 +305,7 @@ static inline void _inquiry_response_timeout(size_t addr) {
 	_inquiry_module = 0;
 
 	if (module_active(addr)) {
+		led_activate(pin_led_red, 100, 100);
 		mtbbus_rx_flags.sep.timeout_inquiry = true;
 		if (module_dec_attempts(addr) == 0)
 			module_set_active(addr, false);
