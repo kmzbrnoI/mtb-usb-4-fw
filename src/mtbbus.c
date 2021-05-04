@@ -183,11 +183,12 @@ static inline void _message_received() {
 		return;
 	}
 
-	if ((_inquiry_module == 0) || (mtbbus_received_data[1] != MTBBUS_CMD_MISO_ACK)) {
-		_inquiry_module = 0;
+	if (_inquiry_module == 0) {
 		mtbbus_rx_flags.sep.received = true;
 	} else {
 		_inquiry_response_ok(mtbbus_addr);
+		if (mtbbus_received_data[1] != MTBBUS_CMD_MISO_ACK)
+			mtbbus_rx_flags.sep.received = true;
 	}
 }
 
@@ -291,13 +292,15 @@ static inline void _mtbbus_send_buf(size_t total_len) {
 }
 
 void mtbbus_module_inquiry(uint8_t module_addr) {
+	uint8_t data[1] = {0x02 | (module_changed(module_addr) ? 1 : 0)};
 	_inquiry_module = module_addr;
-	mtbbus_send(module_addr, MTBBUS_CMD_MOSI_MODULE_INQUIRY, NULL, 0);
+	mtbbus_send(module_addr, MTBBUS_CMD_MOSI_MODULE_INQUIRY, data, 1);
 }
 
 static inline void _inquiry_response_ok(size_t addr) {
 	_inquiry_module = 0;
 	module_reset_attempts(addr);
+	module_set_changed(addr, true);
 	if (!module_active(addr)) {
 		mtbbus_rx_flags.sep.discovered = true;
 		module_set_active(addr, true);
@@ -306,6 +309,7 @@ static inline void _inquiry_response_ok(size_t addr) {
 
 static inline void _inquiry_response_timeout(size_t addr) {
 	_inquiry_module = 0;
+	module_set_changed(addr, false);
 
 	if (module_active(addr)) {
 		led_activate(pin_led_red, 100, 100);

@@ -11,6 +11,7 @@
 
 extern uint32_t modules_active[8];
 extern uint32_t modules_timeout_counters[32];
+extern uint32_t modules_changed[32];
 
 void modules_init(void);
 bool module_active(uint8_t addr);
@@ -23,3 +24,6 @@ void module_set_attempts(uint8_t addr, size_t value);
 
 // Returns 0 in case when no activa address in range addr+1–255 found.
 uint8_t module_next_active_addr(uint8_t addr);
+
+bool module_changed(uint8_t addr);
+void module_set_changed(uint8_t addr, bool state);

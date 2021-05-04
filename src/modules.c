@@ -4,6 +4,7 @@
 
 uint32_t modules_active[8];
 uint32_t modules_timeout_counters[32];
+uint32_t modules_changed[32];
 
 void modules_init(void) {
 	for (size_t i = 0; i < 8; i++)
@@ -64,4 +65,15 @@ uint8_t module_next_active_addr(uint8_t addr) {
 	} while ((module_active&1) == 0);
 
 	return addr;
+}
+
+bool module_changed(uint8_t addr) {
+	return (modules_changed[addr/32] >> (addr%32)) & 0x1;
+}
+
+void module_set_changed(uint8_t addr, bool state) {
+	if (state)
+		modules_changed[addr/32] |= (1 << (addr%32));
+	else
+		modules_changed[addr/32] &= ~(1 << (addr%32));
 }
