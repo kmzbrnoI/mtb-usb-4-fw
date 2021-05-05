@@ -144,6 +144,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 
 		if (mtbbus_addr != 0) {
 			// read just a single byte in DMA mode (first byte contains number of bytes following)
+			for (volatile size_t i = 0; i != 0x02; i++); // delay ~1 us
 			_response_counter = RESPONSE_COUNTER_FULL;
 			_receiving_first = true;
 			HAL_UART_Receive_DMA(&_h_uart_mtbbus, (uint8_t*)mtbbus_received_data, 1);
@@ -287,6 +288,7 @@ static inline void _mtbbus_send_buf(size_t total_len) {
 	total_len += 2;
 
 	gpio_pin_write(pin_usart_mtb_dir, true);
+	for (volatile size_t i = 0; i != 0x02; i++); // delay ~1 us
 	_rx_interrupt_enable();
 	HAL_UART_Transmit_DMA(&_h_uart_mtbbus, (uint8_t*)_out_buf, total_len);
 }
