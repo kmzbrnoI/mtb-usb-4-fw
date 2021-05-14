@@ -73,6 +73,7 @@ volatile size_t mtbbus_reset_counter = 0;
 
 #define MTBBUS_SEND_ATTEMPTS 3
 volatile uint8_t mtbbus_resent_times = 0;
+volatile bool mtbbus_send_lock = false;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -80,7 +81,7 @@ static void error_handler();
 static void init(void);
 static bool clock_init(void);
 static bool debug_uart_init(void);
-void forward_mtbbus_received_to_usb();
+bool forward_mtbbus_received_to_usb();
 static inline void mtbbus_poll_rx_flags(void);
 static void ring_usb_to_mtbbus_poll(void);
 static inline bool ring_usb_to_mtbbus_message_ready(void);
@@ -318,7 +319,8 @@ void TIM3_IRQHandler(void) {
 	_inq_period_counter++;
 	if (_inq_period_counter >= _inq_period_max) {
 		_inq_period_counter = 0;
-		if (mtbbus_can_send() && (!ring_usb_to_mtbbus_message_ready()) && (_speed_change_req == 0)) {
+		if ((mtbbus_can_send()) && (!ring_usb_to_mtbbus_message_ready()) &&
+		    (_speed_change_req == 0) && (!mtbbus_send_lock)) {
 			mtbbus_modules_inquiry();
 
 			/*busmeasure_counter++;
@@ -332,7 +334,7 @@ void TIM3_IRQHandler(void) {
 
 	if (mtbbus_reset_counter > 0) {
 		if ((mtbbus_reset_counter % MTBBUS_DO_RESET) == 0) {
-			if (mtbbus_can_send()) {
+			if ((mtbbus_can_send()) && (!mtbbus_send_lock)) {
 				mtbbus_send(0, MTBBUS_CMD_MOSI_RESET_OUTPUTS, NULL, 0);
 				mtbbus_reset_counter--;
 			}
@@ -401,15 +403,15 @@ static inline void poll_usb_tx_flags(void) {
 		cdc_tx.separate.data[4] = MTBBUS_PROT_VER_MAJOR;
 		cdc_tx.separate.data[5] = MTBBUS_PROT_VER_MINOR;
 
-		cdc_main_send_nocopy(MTBUSB_CMD_MP_INFO, 6);
-		device_usb_tx_req.sep.info = false;
+		if (cdc_main_send_nocopy(MTBUSB_CMD_MP_INFO, 6))
+			device_usb_tx_req.sep.info = false;
 
 	} else if (device_usb_tx_req.sep.active_modules) {
 		for (size_t i = 0; i < 32; i++)
 			cdc_tx.separate.data[i] = modules_active[i/4] >> (8*(i%4));
 
-		cdc_main_send_nocopy(MTBUSB_CMD_MP_ACTIVE_MODULES_LIST, 32);
-		device_usb_tx_req.sep.active_modules = false;
+		if (cdc_main_send_nocopy(MTBUSB_CMD_MP_ACTIVE_MODULES_LIST, 32))
+			device_usb_tx_req.sep.active_modules = false;
 
 	} else if (device_usb_tx_req.sep.full_buffer) {
 		cdc_send_error(MTBUSB_ERROR_FULL_BUFFER, _error_full_buffer_command_code, _error_full_buffer_module_addr);
@@ -424,12 +426,12 @@ void cdc_main_died() {
 
 /* MTBbus --------------------------------------------------------------------*/
 
-void forward_mtbbus_received_to_usb() {
+bool forward_mtbbus_received_to_usb() {
 	cdc_tx.separate.data[0] = mtbbus_resent_times;
 	cdc_tx.separate.data[1] = mtbbus_addr;
 	for (size_t i = 1; i < mtbbus_received_data[0]+1; i++)
 		cdc_tx.separate.data[i+1] = mtbbus_received_data[i] & 0xFF;
-	cdc_main_send_nocopy(MTBUSB_CMD_MP_FORWARD, mtbbus_received_data[0]+2);
+	return cdc_main_send_nocopy(MTBUSB_CMD_MP_FORWARD, mtbbus_received_data[0]+2);
 }
 
 static inline void mtbbus_poll_rx_flags(void) {
@@ -439,9 +441,10 @@ static inline void mtbbus_poll_rx_flags(void) {
 		return; // USB busy → wait for next poll
 
 	if (mtbbus_rx_flags.sep.received) {
-		forward_mtbbus_received_to_usb();
-		mtbbus_message_processed();
-		mtbbus_rx_flags.sep.received = false;
+		if (forward_mtbbus_received_to_usb()) {
+			mtbbus_message_processed();
+			mtbbus_rx_flags.sep.received = false;
+		}
 
 	} else if (mtbbus_rx_flags.sep.timeout_pc) {
 		if (mtbbus_resent_times == MTBBUS_SEND_ATTEMPTS) {
@@ -453,21 +456,24 @@ static inline void mtbbus_poll_rx_flags(void) {
 	} else if (mtbbus_rx_flags.sep.timeout_inquiry) {
 		cdc_tx.separate.data[0] = mtbbus_addr;
 		cdc_tx.separate.data[1] = module_get_attempts(mtbbus_addr);
-		cdc_main_send_nocopy(MTBUSB_CMD_MP_MODULE_FAILED, 2);
-		mtbbus_rx_flags.sep.timeout_inquiry = false;
+		if (cdc_main_send_nocopy(MTBUSB_CMD_MP_MODULE_FAILED, 2))
+			mtbbus_rx_flags.sep.timeout_inquiry = false;
 
 	} else if (mtbbus_rx_flags.sep.discovered) {
 		cdc_tx.separate.data[0] = mtbbus_addr;
-		cdc_main_send_nocopy(MTBUSB_CMD_MP_NEW_MODULE, 1);
-		mtbbus_rx_flags.sep.discovered = false;
+		if (cdc_main_send_nocopy(MTBUSB_CMD_MP_NEW_MODULE, 1))
+			mtbbus_rx_flags.sep.discovered = false;
 	}
 }
 
 static void ring_usb_to_mtbbus_poll(void) {
+	// Warning: this function could be interrupted with module inquiry periodic send
+	mtbbus_send_lock = true;
 	if ((mtbbus_can_send()) && ring_usb_to_mtbbus_message_ready() && (mtbbus_resent_times < MTBBUS_SEND_ATTEMPTS)) {
 		if (mtbbus_send_from_ring(&ring_usb_to_mtbbus))
 			mtbbus_resent_times++;
 	}
+	mtbbus_send_lock = false;
 }
 
 static inline bool ring_usb_to_mtbbus_message_ready(void) {

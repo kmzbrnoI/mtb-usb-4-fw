@@ -41,8 +41,8 @@ bool cdc_main_send_copy(uint8_t command_code, uint8_t *data, size_t datasize);
 bool cdc_main_send_nocopy(uint8_t command_code, size_t datasize);
 void cdc_main_died(void);
 
-void cdc_send_ack(void);
-void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module);
+bool cdc_send_ack(void);
+bool cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module);
 
 int cdc_debug_send(uint8_t *data, size_t datasize);
 

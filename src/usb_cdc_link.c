@@ -557,7 +557,7 @@ static void main_cdc_tx(usbd_device *dev, uint8_t event, uint8_t ep) {
 }
 
 bool cdc_main_can_send(void) {
-	return !tx.sending && cdc_dtr_ready;
+	return (!tx.sending) && (cdc_dtr_ready);
 }
 
 bool _cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize, bool copy) {
@@ -574,11 +574,10 @@ bool _cdc_main_send(uint8_t command_code, uint8_t *data, size_t datasize, bool c
 	if (copy)
 		memcpy(cdc_tx.separate.data, data, datasize);
 	tx.size = datasize+4;
-	tx.pos = 0;
 	tx.sending = true;
 
-	tx.pos += usbd_ep_write(&udev, CDC_MAIN_TXD_EP, cdc_tx.all,
-	                        (tx.size < CDC_DATA_SZ) ? tx.size : CDC_DATA_SZ);
+	tx.pos = usbd_ep_write(&udev, CDC_MAIN_TXD_EP, cdc_tx.all,
+	                       (tx.size < CDC_DATA_SZ) ? tx.size : CDC_DATA_SZ);
 
 	if (tx.pos == 0) {
 		tx.sending = false;
@@ -596,15 +595,13 @@ bool cdc_main_send_nocopy(uint8_t command_code, size_t datasize) {
 	return _cdc_main_send(command_code, NULL, datasize, false);
 }
 
-void cdc_send_ack(void) {
-	if (cdc_main_can_send())
-		cdc_main_send_nocopy(MTBUSB_CMD_MP_ACK, 0);
+bool cdc_send_ack(void) {
+	return cdc_main_send_nocopy(MTBUSB_CMD_MP_ACK, 0);
 }
 
-void cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module) {
+bool cdc_send_error(uint8_t error_code, uint8_t command_code, uint8_t module) {
 	uint8_t buf[3] = {error_code, command_code, module};
-	if (cdc_main_can_send())
-		cdc_main_send_copy(MTBUSB_CMD_MP_ERROR, buf, 3);
+	return cdc_main_send_copy(MTBUSB_CMD_MP_ERROR, buf, 3);
 }
 
 /* Debug CDC -----------------------------------------------------------------*/

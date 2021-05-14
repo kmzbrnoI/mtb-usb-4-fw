@@ -188,8 +188,9 @@ static inline void _message_received() {
 		mtbbus_rx_flags.sep.received = true;
 	} else {
 		_inquiry_response_ok(mtbbus_addr);
-		if (mtbbus_received_data[1] != MTBBUS_CMD_MISO_ACK)
+		if (mtbbus_received_data[1] != MTBBUS_CMD_MISO_ACK) {
 			mtbbus_rx_flags.sep.received = true;
+		}
 	}
 }
 
