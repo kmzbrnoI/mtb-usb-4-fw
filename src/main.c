@@ -34,6 +34,7 @@
 UART_HandleTypeDef h_uart_debug;
 TIM_HandleTypeDef h_tim2;
 TIM_HandleTypeDef h_tim3;
+IWDG_HandleTypeDef h_iwdg;
 
 #define RING_USB_TO_MTBBUS_SIZE 256
 uint8_t _usb_to_mtbbus_data[RING_USB_TO_MTBBUS_SIZE];
@@ -94,6 +95,8 @@ static inline void config_save_poll(void);
 
 static void mtbbus_message_processed(void);
 
+static bool iwdg_init(void);
+
 /* Code ----------------------------------------------------------------------*/
 
 int main(void) {
@@ -122,6 +125,9 @@ void init(void) {
 
 	ee_init();
 	config_load();
+
+	if (!iwdg_init())
+		error_handler();
 
 	_inq_period_max = _speed_to_inq_period[config.mtbbus_speed];
 	if (!mtbbus_init(_speed_to_br[config.mtbbus_speed]))
@@ -266,6 +272,14 @@ void error_handler(void) {
 	while (true);
 }
 
+
+static bool iwdg_init(void) {
+	h_iwdg.Instance = IWDG;
+	h_iwdg.Init.Prescaler = IWDG_PRESCALER_4; // Watchdog counter decrements each 100 us
+	h_iwdg.Init.Reload = 1000; // Watchdog timeout 100 ms
+	return (HAL_IWDG_Init(&h_iwdg) == HAL_OK);
+}
+
 #ifdef USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line) {
 }
@@ -322,6 +336,8 @@ void TIM3_IRQHandler(void) {
 		if ((mtbbus_can_send()) && (!ring_usb_to_mtbbus_message_ready()) &&
 		    (_speed_change_req == 0) && (!mtbbus_send_lock)) {
 			mtbbus_modules_inquiry();
+
+			HAL_IWDG_Refresh(&h_iwdg);
 
 			/*busmeasure_counter++;
 			if (busmeasure_counter == BUSMEASURE_TICKS) {
