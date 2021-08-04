@@ -76,6 +76,10 @@ volatile size_t mtbbus_reset_counter = 0;
 volatile uint8_t mtbbus_resent_times = 0;
 volatile bool mtbbus_send_lock = false;
 
+// Forwarding packets is allowed at most in half of outgoing commands:
+// At least 1 inquiry between each 2 commands from USB.
+volatile bool mtbbus_last_inq = false;
+
 /* Private function prototypes -----------------------------------------------*/
 
 static void error_handler();
@@ -333,9 +337,10 @@ void TIM3_IRQHandler(void) {
 	_inq_period_counter++;
 	if (_inq_period_counter >= _inq_period_max) {
 		_inq_period_counter = 0;
-		if ((mtbbus_can_send()) && (!ring_usb_to_mtbbus_message_ready()) &&
+		if ((mtbbus_can_send()) && ((!ring_usb_to_mtbbus_message_ready()) || (!mtbbus_last_inq)) &&
 		    (_speed_change_req == 0) && (!mtbbus_send_lock)) {
 			mtbbus_modules_inquiry();
+			mtbbus_last_inq = true;
 
 			HAL_IWDG_Refresh(&h_iwdg);
 
@@ -485,7 +490,9 @@ static inline void mtbbus_poll_rx_flags(void) {
 static void ring_usb_to_mtbbus_poll(void) {
 	// Warning: this function could be interrupted with module inquiry periodic send
 	mtbbus_send_lock = true;
-	if ((mtbbus_can_send()) && ring_usb_to_mtbbus_message_ready() && (mtbbus_resent_times < MTBBUS_SEND_ATTEMPTS)) {
+	if ((mtbbus_last_inq) && (mtbbus_can_send()) && (ring_usb_to_mtbbus_message_ready()) &&
+	    (mtbbus_resent_times < MTBBUS_SEND_ATTEMPTS)) {
+		mtbbus_last_inq = false;
 		if (mtbbus_send_from_ring(&ring_usb_to_mtbbus))
 			mtbbus_resent_times++;
 	}
