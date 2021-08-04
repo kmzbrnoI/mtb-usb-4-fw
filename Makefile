@@ -32,6 +32,7 @@ C_SOURCES = \
 	lib/libusb_stm32/src/usbd_core.c \
 	lib/eeprom/ee.c \
 	lib/ina219/adafruit_ina219.c \
+	lib/dwt_delay/dwt_delay.c \
 	$(wildcard src/*.c)
 
 ASM_SOURCES = startup_stm32f103xb.s
@@ -85,6 +86,7 @@ C_OR_CPP_INCLUDES = \
 	-Ilib/libusb_stm32/inc \
 	-Ilib/eeprom \
 	-Ilib/ina219 \
+	-Ilib/dwt_delay \
 	-I inc
 
 AS_INCLUDES =

@@ -28,6 +28,7 @@
 #include "ee.h"
 #include "leds.h"
 #include "adafruit_ina219.h"
+#include "dwt_delay.h"
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -112,12 +113,15 @@ int main(void) {
 		poll_usb_tx_flags();
 		poll_speed_change();
 		config_save_poll();
+
+		DWT_Delay(200); // 200 us
 	}
 }
 
 void init(void) {
 	if (!clock_init())
 		error_handler();
+	DWT_Init();
 	HAL_Init();
 	gpio_init();
 	leds_init();
