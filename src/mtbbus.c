@@ -189,6 +189,7 @@ static inline void _message_received() {
 	} else {
 		_inquiry_response_ok(mtbbus_addr);
 		if (mtbbus_received_data[1] != MTBBUS_CMD_MISO_ACK) {
+			module_set_changed(mtbbus_addr, true);
 			mtbbus_rx_flags.sep.received = true;
 		}
 	}
@@ -303,7 +304,6 @@ void mtbbus_module_inquiry(uint8_t module_addr) {
 static inline void _inquiry_response_ok(size_t addr) {
 	_inquiry_module = 0;
 	module_reset_attempts(addr);
-	module_set_changed(addr, true);
 	if (!module_active(addr)) {
 		mtbbus_rx_flags.sep.discovered = true;
 		module_set_active(addr, true);
