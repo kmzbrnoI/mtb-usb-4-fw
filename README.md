@@ -49,7 +49,7 @@ MTB-USB module is a master module of MTBbus.
    - `st-flash` (via STlink)
       MTB-USB module contains programming connector. Use STlink to program the MCU.
      ```bash
-     $ st-flash --reset write build/mtb-usb-4.bin 0x08000000
+     $ make flash
      ```
 
 ## References

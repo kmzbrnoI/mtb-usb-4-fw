@@ -156,4 +156,9 @@ $(BUILD_DIR):
 clean:
 	-rm -fR $(BUILD_DIR)
 
+flash:
+	st-flash --reset write build/mtb-usb-4.bin 0x08000000
+
 -include $(wildcard $(BUILD_DIR)/*.d)
+
+.PHONY: clean flash
