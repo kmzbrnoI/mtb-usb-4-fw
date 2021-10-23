@@ -446,10 +446,6 @@ static usbd_respond cdc_setconf(usbd_device* dev, uint8_t cfg) {
 void cdc_init() {
 	__HAL_RCC_USB_CLK_ENABLE();
 
-	// quickly charge Button capacitor
-	// pinInit(button3Pin, GPIO_MODE_OUTPUT_PP, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH, true);
-	// pinWrite(button3Pin, 1);
-
 	rx.pos = 0;
 	tx.sending = false;
 
