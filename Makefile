@@ -35,7 +35,7 @@ C_SOURCES = \
 	lib/dwt_delay/dwt_delay.c \
 	$(wildcard src/*.c)
 
-ASM_SOURCES = startup_stm32f103xb.s
+ASM_SOURCES = startup_stm32f103xb.s bootloader.s
 
 PREFIX = arm-none-eabi-
 

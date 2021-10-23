@@ -58,6 +58,8 @@ _estack = 0x20005000;    /* end of RAM */
 _Min_Heap_Size = 0x200;      /* required amount of heap  */
 _Min_Stack_Size = 0x400; /* required amount of stack */
 
+_Bootloader_Region_Size = 0x1000;
+
 /* Specify the memory areas */
 MEMORY
 {
@@ -68,6 +70,15 @@ FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 64K
 /* Define output sections */
 SECTIONS
 {
+  /* Links in bootloader binary */
+  .bootloader :
+  {
+    KEEP(*(.bootloader*))
+    ASSERT(. <= _Bootloader_Region_Size, "The bootloader is too big");
+     /* "cannot move location counter backwards" error means the bootloader is too big. The assert above is evaluated after the next line :/ */
+    . = _Bootloader_Region_Size;
+  } > FLASH
+
   /* The startup code goes first into FLASH */
   .isr_vector :
   {
