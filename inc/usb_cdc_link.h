@@ -35,6 +35,7 @@ extern volatile bool cdc_dtr_ready; // if computer reads data
 void cdc_main_received(uint8_t command_code, uint8_t *data, size_t data_size);
 
 void cdc_init();
+void cdc_deinit();
 bool cdc_is_debug_ep_enabled();
 bool cdc_main_can_send(void);
 bool cdc_main_send_copy(uint8_t command_code, uint8_t *data, size_t datasize);
@@ -51,6 +52,7 @@ int cdc_debug_send(uint8_t *data, size_t datasize);
 #define MTBUSB_CMD_PM_CHANGE_SPEED 0x21
 #define MTBUSB_CMD_PM_ACTIVE_MODULES_REQ 0x22
 #define MTBUSB_CMD_PM_PING 0x30
+#define MTBUSB_CMD_PM_REBOOT_BOOTLOADER 0x31
 
 #define MTBUSB_CMD_MP_ACK 0x01
 #define MTBUSB_CMD_MP_ERROR 0x02

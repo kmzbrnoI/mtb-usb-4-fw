@@ -93,6 +93,7 @@ static void ring_usb_to_mtbbus_poll(void);
 static inline bool ring_usb_to_mtbbus_message_ready(void);
 static inline void poll_usb_tx_flags(void);
 static inline void poll_speed_change(void);
+static inline void reboot_to_dfu();
 
 static inline void config_load(void);
 static inline bool config_save(void);
@@ -293,6 +294,16 @@ void assert_failed(uint8_t *file, uint32_t line) {
 }
 #endif /* USE_FULL_ASSERT */
 
+static inline void reboot_to_dfu() {
+	__disable_irq();
+	cdc_deinit();
+
+	volatile uint32_t* st = (uint32_t*)0x020004ffc; // __stack
+	*st = 0x157F32D4; // DFU_BOOTKEY
+
+	NVIC_SystemReset();
+}
+
 /* Interrupt handlers --------------------------------------------------------*/
 
 // This function handles Non maskable interrupt.
@@ -406,6 +417,9 @@ void cdc_main_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 
 	} else if (command_code == MTBUSB_CMD_PM_PING) {
 		device_usb_tx_req.sep.ack = true;
+
+	} else if (command_code == MTBUSB_CMD_PM_REBOOT_BOOTLOADER) {
+		reboot_to_dfu();
 
 	}
 }

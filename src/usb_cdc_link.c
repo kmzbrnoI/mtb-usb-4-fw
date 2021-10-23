@@ -487,6 +487,10 @@ void cdc_init() {
 	usbd_connect(&udev, true);
 }
 
+void cdc_deinit() {
+	usbd_connect(&udev, false); // disconnect
+}
+
 bool cdc_is_debug_ep_enabled() {
 	return enableDebugEp;
 }
