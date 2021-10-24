@@ -168,11 +168,14 @@ clean:
 	-rm -fR $(BUILD_DIR)
 
 flash_with_bootloader:
-	st-flash --reset write build/mtb-usb-4_bootloader.bin 0x08000000
+	st-flash --reset write $(BUILD_DIR)/$(TARGET)_bootloader.bin 0x08000000
 
-flash_without_bootloader:
-	st-flash --reset write build/mtb-usb-4.bin 0x08001000
+flash_stlink_without_bootloader:
+	st-flash --reset write $(BUILD_DIR)/$(TARGET).bin 0x08001000
+
+flash_dfu:
+	dfu-util -D $(BUILD_DIR)/$(TARGET).bin -R
 
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-.PHONY: clean flash_with_bootloader flash_without_bootloader
+.PHONY: clean flash_with_bootloader flash_stlink_without_bootloader flash_dfu
