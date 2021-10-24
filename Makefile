@@ -113,13 +113,17 @@ CPPFLAGS += \
 	-DUSBD_DP_PIN=10
 
 
-LDSCRIPT = STM32F103C8Tx_FLASH.ld
+LDSCRIPT_BOOTLOADER = STM32F103C8Tx_FLASH.ld
+LDSCRIPT_NO_BOOTLOADER = STM32F103C8Tx_FLASH_no_bootloader.ld
 
 LIBS = -lc -lm -lnosys
 LIBDIR =
-LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
+LDFLAGS = $(MCU) -specs=nosys.specs $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
+LDFLAGS_BOOTLOADER = $(LDFLAGS) -T$(LDSCRIPT_BOOTLOADER)
+LDFLAGS_NO_BOOTLOADER = $(LDFLAGS) -T$(LDSCRIPT_NO_BOOTLOADER)
 
-all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
+all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin \
+	$(BUILD_DIR)/$(TARGET)_bootloader.elf $(BUILD_DIR)/$(TARGET)_bootloader.hex $(BUILD_DIR)/$(TARGET)_bootloader.bin
 
 
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
@@ -144,7 +148,11 @@ $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	$(AS) -c $(ASFLAGS) $< -o $@
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
-	$(LD) $(OBJECTS) $(LDFLAGS) -o $@
+	$(LD) $(OBJECTS) $(LDFLAGS_NO_BOOTLOADER) -o $@
+	$(SZ) $@
+
+$(BUILD_DIR)/$(TARGET)_bootloader.elf: $(OBJECTS) Makefile
+	$(LD) $(OBJECTS) $(LDFLAGS_BOOTLOADER) -o $@
 	$(SZ) $@
 
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
@@ -159,9 +167,12 @@ $(BUILD_DIR):
 clean:
 	-rm -fR $(BUILD_DIR)
 
-flash:
-	st-flash --reset write build/mtb-usb-4.bin 0x08000000
+flash_with_bootloader:
+	st-flash --reset write build/mtb-usb-4_bootloader.bin 0x08000000
+
+flash_without_bootloader:
+	st-flash --reset write build/mtb-usb-4.bin 0x08001000
 
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-.PHONY: clean flash
+.PHONY: clean flash_with_bootloader flash_without_bootloader
