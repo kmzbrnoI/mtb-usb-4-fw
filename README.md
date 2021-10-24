@@ -30,6 +30,8 @@ MTB-USB module is a master module of MTBbus.
 
  * Development:
    - `arm-none-eabi-gcc`
+   - [bootloader](https://github.com/kmzbrnoI/mtb-usb-4-bootloader):
+     build it and symlink `bootloader.bin` to built binary.
    - `make`
      ```bash
      $ make
@@ -49,7 +51,11 @@ MTB-USB module is a master module of MTBbus.
    - `st-flash` (via STlink)
       MTB-USB module contains programming connector. Use STlink to program the MCU.
      ```bash
-     $ make flash
+     $ make flash_with_bootloader
+     ```
+   - Or use DFU bootloader  in MTB-USB (if bootloader already flashed).
+     ```bash
+     make flash_dfu
      ```
 
 ## References
