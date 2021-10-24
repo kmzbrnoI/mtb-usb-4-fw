@@ -349,6 +349,17 @@ void TIM3_IRQHandler(void) {
 	/*static size_t busmeasure_counter = 0;
 	#define BUSMEASURE_TICKS 50*/
 
+	if (mtbbus_reset_counter > 0) {
+		if ((mtbbus_reset_counter % MTBBUS_DO_RESET) == 0) {
+			if ((mtbbus_can_send()) && (!mtbbus_send_lock)) {
+				mtbbus_send(0, MTBBUS_CMD_MOSI_RESET_OUTPUTS, NULL, 0);
+				mtbbus_reset_counter--;
+			}
+		} else {
+			mtbbus_reset_counter--;
+		}
+	}
+
 	_inq_period_counter++;
 	if (_inq_period_counter >= _inq_period_max) {
 		_inq_period_counter = 0;
@@ -365,17 +376,6 @@ void TIM3_IRQHandler(void) {
 				ina219_startMeasure();
 			}*/
 			led_activate(pin_led_green, 50, 50);
-		}
-	}
-
-	if (mtbbus_reset_counter > 0) {
-		if ((mtbbus_reset_counter % MTBBUS_DO_RESET) == 0) {
-			if ((mtbbus_can_send()) && (!mtbbus_send_lock)) {
-				mtbbus_send(0, MTBBUS_CMD_MOSI_RESET_OUTPUTS, NULL, 0);
-				mtbbus_reset_counter--;
-			}
-		} else {
-			mtbbus_reset_counter--;
 		}
 	}
 
