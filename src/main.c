@@ -66,12 +66,12 @@ volatile bool _config_save = false;
 
 #define MTBBUS_SPEEDS 4
 const uint32_t _speed_to_br[MTBBUS_SPEEDS] = {38400, 38400, 57600, 115200};
-const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {3, 3, 2, 1}; // in milliseconds
+const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {30, 30, 20, 10}; // in 100us
 
 // Send 3 resets in 50 ms interval
 volatile size_t mtbbus_reset_counter = 0;
-#define MTBBUS_RESET_FULL 151
-#define MTBBUS_DO_RESET 50
+#define MTBBUS_RESET_FULL 205
+#define MTBBUS_DO_RESET 50 // 50 ms
 
 #define MTBBUS_SEND_ATTEMPTS 3
 volatile uint8_t mtbbus_resent_times = 0;
@@ -80,6 +80,8 @@ volatile bool mtbbus_send_lock = false;
 // Forwarding packets is allowed at most in half of outgoing commands:
 // At least 1 inquiry between each 2 commands from USB.
 volatile bool mtbbus_last_inq = false;
+
+volatile bool leds_update = false;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -115,7 +117,27 @@ int main(void) {
 		poll_speed_change();
 		config_save_poll();
 
-		DWT_Delay(200); // 200 us
+		if (_inq_period_counter >= _inq_period_max) {
+			_inq_period_counter = 0;
+			if ((mtbbus_can_send()) && ((!ring_usb_to_mtbbus_message_ready()) || (!mtbbus_last_inq)) &&
+				(_speed_change_req == 0) && (!mtbbus_send_lock)) {
+				mtbbus_modules_inquiry();
+				mtbbus_last_inq = true;
+
+				HAL_IWDG_Refresh(&h_iwdg);
+				led_activate(pin_led_green, 50, 50);
+			}
+		}
+
+		if (leds_update) {
+			leds_update = false;
+			leds_update_1ms();
+		}
+
+		if ((mtbbus_reset_counter != 0) && ((mtbbus_reset_counter % MTBBUS_DO_RESET) == 0) && (mtbbus_can_send()) && (!mtbbus_send_lock)) {
+			if (mtbbus_send(0, MTBBUS_CMD_MOSI_RESET_OUTPUTS, NULL, 0))
+				mtbbus_reset_counter--;
+		}
 	}
 }
 
@@ -225,7 +247,7 @@ bool clock_init(void) {
 	HAL_NVIC_SetPriority(TIM2_IRQn, 8, 0);
 	HAL_NVIC_EnableIRQ(TIM2_IRQn);
 
-	// Timer 3 @ 1 ms
+	// Timer 3 @ 100 us
 	h_tim3.Instance = TIM3;
 	h_tim3.Init.Prescaler = 128;
 	h_tim3.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -345,41 +367,25 @@ void TIM2_IRQHandler(void) {
 }
 
 void TIM3_IRQHandler(void) {
-	// Timer 3 @ 1 ms (1 kHz)
+	// Timer 3 @ 100 us (10 kHz)
 	/*static size_t busmeasure_counter = 0;
 	#define BUSMEASURE_TICKS 50*/
 
-	if (mtbbus_reset_counter > 0) {
-		if ((mtbbus_reset_counter % MTBBUS_DO_RESET) == 0) {
-			if ((mtbbus_can_send()) && (!mtbbus_send_lock)) {
-				mtbbus_send(0, MTBBUS_CMD_MOSI_RESET_OUTPUTS, NULL, 0);
-				mtbbus_reset_counter--;
-			}
-		} else {
-			mtbbus_reset_counter--;
+	if ((mtbbus_reset_counter > 0) && ((mtbbus_reset_counter % MTBBUS_DO_RESET) != 0))
+		mtbbus_reset_counter--;
+
+	if (_inq_period_counter < _inq_period_max)
+		_inq_period_counter++;
+
+	{
+		static size_t i = 0;
+		i++;
+		if (i >= 1) {
+			leds_update = true;
+			i = 0;
 		}
 	}
 
-	_inq_period_counter++;
-	if (_inq_period_counter >= _inq_period_max) {
-		_inq_period_counter = 0;
-		if ((mtbbus_can_send()) && ((!ring_usb_to_mtbbus_message_ready()) || (!mtbbus_last_inq)) &&
-		    (_speed_change_req == 0) && (!mtbbus_send_lock)) {
-			mtbbus_modules_inquiry();
-			mtbbus_last_inq = true;
-
-			HAL_IWDG_Refresh(&h_iwdg);
-
-			/*busmeasure_counter++;
-			if (busmeasure_counter == BUSMEASURE_TICKS) {
-				busmeasure_counter = 0;
-				ina219_startMeasure();
-			}*/
-			led_activate(pin_led_green, 50, 50);
-		}
-	}
-
-	leds_update_1ms();
 	HAL_TIM_IRQHandler(&h_tim3);
 }
 
