@@ -31,7 +31,7 @@ typedef union {
 
 // These variables store last received data from slave module:
 extern volatile MtbBusRxFlags mtbbus_rx_flags;
-extern uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
+extern volatile uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
 extern volatile size_t mtbbus_addr;
 extern volatile size_t mtbbus_command_code;
 
@@ -39,6 +39,7 @@ extern volatile size_t mtbbus_command_code;
 bool mtbbus_init(uint32_t speed);
 bool mtbbus_can_send(void);
 void mtbbus_update_50us(void);
+void mtbbus_poll(void);
 
 // mtbbus_can_send() must be true before calling these functions:
 bool mtbbus_change_speed(uint32_t speed);

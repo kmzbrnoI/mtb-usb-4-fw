@@ -25,12 +25,13 @@ DMA_Channel_TypeDef* const _uart_rx_dma_channel = DMA1_Channel3;
 
 /* Buffers -------------------------------------------------------------------*/
 
-uint16_t _out_buf[MTBBUS_OUT_BUF_SIZE];
-uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
+volatile uint16_t _out_buf[MTBBUS_OUT_BUF_SIZE];
+volatile uint16_t mtbbus_received_data[MTBBUS_IN_BUF_SIZE];
 volatile bool _receiving_first = false;
 volatile size_t _receiving = 0; // 0 = not receiving, 1..RECEIVING_UPDATE_TIMEOUT = receiving
 volatile bool _sending = false;
 volatile size_t _response_counter = 0;
+volatile bool received = false;
 
 #define RESPONSE_COUNTER_FULL 5 // 250 us
 #define RECEIVING_UPDATE_TIMEOUT 1000 // 50 ms
@@ -120,7 +121,7 @@ bool mtbbus_change_speed(uint32_t speed) {
 }
 
 bool mtbbus_can_send(void) {
-	return (!_sending) && (_receiving == 0) && (mtbbus_rx_flags.all == 0) && (_response_counter == 0);
+	return (!_sending) && (_receiving == 0) && (mtbbus_rx_flags.all == 0) && (_response_counter == 0) && (!received);
 }
 
 void DMA1_Channel2_IRQHandler() {
@@ -168,18 +169,23 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 		} else {
 			// all data received
 			_receiving = 0;
-			_message_received();
+			received = true;
 		}
 	}
 }
 
-static inline void _message_received() {
-	// TODO: maybe it is better/faster to calc xor as data arrives (receive data per 1 byte)
-	// call to crc16modbus_bytes can take time; this function is called from interrupt → should be fast
-	uint16_t crc = crc16modbus_bytes(0, mtbbus_received_data, mtbbus_received_data[0]+1);
-	size_t xorpos = mtbbus_received_data[0]+1;
+void mtbbus_poll(void) {
+	if (received) {
+		_message_received();
+		received = false;
+	}
+}
 
-	if ((mtbbus_received_data[xorpos] != (crc & 0xFF)) || (mtbbus_received_data[xorpos+1] != ((crc>>8) & 0xFF))) {
+void _message_received() {
+	uint16_t crc = crc16modbus_bytes(0, (uint16_t*)mtbbus_received_data, mtbbus_received_data[0]+1);
+	size_t crcpos = mtbbus_received_data[0]+1;
+
+	if ((mtbbus_received_data[crcpos] != (crc & 0xFF)) || (mtbbus_received_data[crcpos+1] != ((crc>>8) & 0xFF))) {
 		mtbbus_bad_checksum();
 		return;
 	}
@@ -216,11 +222,11 @@ void EXTI15_10_IRQHandler(void) {
 	}
 }
 
-static inline void _rx_interrupt_enable() {
+void _rx_interrupt_enable() {
 	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
-static inline void _rx_interrupt_disable() {
+void _rx_interrupt_disable() {
 	HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
 }
 
@@ -283,8 +289,8 @@ bool mtbbus_send_from_ring(volatile ring_buffer* buf) {
 	return true;
 }
 
-static inline void _mtbbus_send_buf(size_t total_len) {
-	uint16_t crc = crc16modbus_bytes(0, _out_buf, total_len);
+void _mtbbus_send_buf(size_t total_len) {
+	uint16_t crc = crc16modbus_bytes(0, (uint16_t*)_out_buf, total_len);
 	_out_buf[total_len] = crc & 0xFF;
 	_out_buf[total_len+1] = (crc >> 8) & 0xFF;
 	total_len += 2;
@@ -301,7 +307,7 @@ void mtbbus_module_inquiry(uint8_t module_addr) {
 	mtbbus_send(module_addr, MTBBUS_CMD_MOSI_MODULE_INQUIRY, data, 1);
 }
 
-static inline void _inquiry_response_ok(size_t addr) {
+void _inquiry_response_ok(size_t addr) {
 	_inquiry_module = 0;
 	module_reset_attempts(addr);
 	if (!module_active(addr)) {
@@ -310,7 +316,7 @@ static inline void _inquiry_response_ok(size_t addr) {
 	}
 }
 
-static inline void _inquiry_response_timeout(size_t addr) {
+void _inquiry_response_timeout(size_t addr) {
 	_inquiry_module = 0;
 	module_set_changed(addr, false);
 

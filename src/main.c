@@ -111,6 +111,7 @@ int main(void) {
 	init();
 
 	while (true) {
+		mtbbus_poll();
 		mtbbus_poll_rx_flags();
 		ring_usb_to_mtbbus_poll();
 		poll_usb_tx_flags();
