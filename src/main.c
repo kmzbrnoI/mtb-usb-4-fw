@@ -56,8 +56,8 @@ volatile uint8_t _error_full_buffer_module_addr;
 
 volatile DeviceUsbTxReq device_usb_tx_req;
 volatile uint32_t _speed_change_req = 0;
-size_t _inq_period_counter = 0;
-size_t _inq_period_max = 5;
+volatile size_t _inq_period_counter = 0;
+volatile size_t _inq_period_max = 50;
 
 struct {
 	uint8_t mtbbus_speed;
@@ -71,7 +71,7 @@ const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {30, 30, 20, 10}; // in 100us
 // Send 3 resets in 50 ms interval
 volatile size_t mtbbus_reset_counter = 0;
 #define MTBBUS_RESET_FULL 205
-#define MTBBUS_DO_RESET 50 // 50 ms
+#define MTBBUS_DO_RESET 500 // 50 ms
 
 #define MTBBUS_SEND_ATTEMPTS 3
 volatile uint8_t mtbbus_resent_times = 0;
@@ -135,7 +135,7 @@ int main(void) {
 			leds_update_1ms();
 		}
 
-		if ((mtbbus_reset_counter != 0) && ((mtbbus_reset_counter % MTBBUS_DO_RESET) == 0) && (mtbbus_can_send()) && (!mtbbus_send_lock)) {
+		if ((mtbbus_reset_counter > 0) && ((mtbbus_reset_counter % MTBBUS_DO_RESET) == 0) && (mtbbus_can_send()) && (!mtbbus_send_lock)) {
 			if (mtbbus_send(0, MTBBUS_CMD_MOSI_RESET_OUTPUTS, NULL, 0))
 				mtbbus_reset_counter--;
 		}
@@ -252,7 +252,7 @@ bool clock_init(void) {
 	h_tim3.Instance = TIM3;
 	h_tim3.Init.Prescaler = 128;
 	h_tim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-	h_tim3.Init.Period = 372;
+	h_tim3.Init.Period = 37;
 	h_tim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	h_tim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&h_tim3) != HAL_OK)
@@ -381,7 +381,7 @@ void TIM3_IRQHandler(void) {
 	{
 		static size_t i = 0;
 		i++;
-		if (i >= 1) {
+		if (i >= 10) {
 			leds_update = true;
 			i = 0;
 		}
