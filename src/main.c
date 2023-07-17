@@ -64,9 +64,9 @@ struct {
 } config;
 volatile bool _config_save = false;
 
-#define MTBBUS_SPEEDS 4
-const uint32_t _speed_to_br[MTBBUS_SPEEDS] = {38400, 38400, 57600, 115200};
-const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {30, 30, 20, 10}; // in 100us
+#define MTBBUS_SPEEDS 5
+const uint32_t _speed_to_br[MTBBUS_SPEEDS] = {38400, 38400, 57600, 115200, 230400};
+const size_t _speed_to_inq_period[MTBBUS_SPEEDS] = {30, 30, 20, 10, 7}; // in 100us
 
 // Send 3 resets in 50 ms interval
 volatile size_t mtbbus_reset_counter = 0;
