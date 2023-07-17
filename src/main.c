@@ -250,7 +250,7 @@ bool clock_init(void) {
 	return true;
 }
 
-static bool debug_uart_init(void) {
+bool debug_uart_init(void) {
 	h_uart_debug.Instance = USART2;
 	h_uart_debug.Init.BaudRate = 115200;
 	h_uart_debug.Init.WordLength = UART_WORDLENGTH_8B;
@@ -282,7 +282,7 @@ void error_handler(void) {
 }
 
 
-static bool iwdg_init(void) {
+bool iwdg_init(void) {
 	h_iwdg.Instance = IWDG;
 	h_iwdg.Init.Prescaler = IWDG_PRESCALER_4; // Watchdog counter decrements each 100 us
 	h_iwdg.Init.Reload = 1000; // Watchdog timeout 100 ms
@@ -294,7 +294,7 @@ void assert_failed(uint8_t *file, uint32_t line) {
 }
 #endif /* USE_FULL_ASSERT */
 
-static inline void reboot_to_dfu() {
+void reboot_to_dfu() {
 	__disable_irq();
 	cdc_deinit();
 
@@ -424,7 +424,7 @@ void cdc_main_received(uint8_t command_code, uint8_t *data, size_t data_size) {
 	}
 }
 
-static inline void poll_usb_tx_flags(void) {
+void poll_usb_tx_flags(void) {
 	if (!cdc_dtr_ready)
 		device_usb_tx_req.all = 0;  // computer does not listen → ignore all flags
 	if (!cdc_main_can_send())
@@ -473,7 +473,7 @@ bool forward_mtbbus_received_to_usb() {
 	return cdc_main_send_nocopy(MTBUSB_CMD_MP_FORWARD, mtbbus_received_data[0]+2);
 }
 
-static inline void mtbbus_poll_rx_flags(void) {
+void mtbbus_poll_rx_flags(void) {
 	if (!cdc_dtr_ready)
 		mtbbus_rx_flags.all = 0;  // computer does not listen → ignore all events from MTBbus
 	if (!cdc_main_can_send())
@@ -505,7 +505,7 @@ static inline void mtbbus_poll_rx_flags(void) {
 	}
 }
 
-static void ring_usb_to_mtbbus_poll(void) {
+void ring_usb_to_mtbbus_poll(void) {
 	// Warning: this function could be interrupted with module inquiry periodic send
 	mtbbus_send_lock = true;
 	if ((mtbbus_last_inq) && (mtbbus_can_send()) && (ring_usb_to_mtbbus_message_ready()) &&
@@ -517,12 +517,12 @@ static void ring_usb_to_mtbbus_poll(void) {
 	mtbbus_send_lock = false;
 }
 
-static inline bool ring_usb_to_mtbbus_message_ready(void) {
+bool ring_usb_to_mtbbus_message_ready(void) {
 	return (!ring_empty(&ring_usb_to_mtbbus)) &&
 	       (ring_length(&ring_usb_to_mtbbus) >= ring_get_byte_begin(&ring_usb_to_mtbbus, 0));
 }
 
-static inline void poll_speed_change(void) {
+void poll_speed_change(void) {
 	if ((_speed_change_req > 0) && (mtbbus_can_send())) {
 		mtbbus_change_speed(_speed_change_req);
 		_speed_change_req = 0;
@@ -533,7 +533,7 @@ void mtbbus_bad_checksum(void) {
 	led_activate(pin_led_red, 100, 100);
 }
 
-static void mtbbus_message_processed(void) {
+void mtbbus_message_processed(void) {
 	mtbbus_resent_times = 0;
 	if (ring_usb_to_mtbbus_message_ready())
 		ring_move_begin(&ring_usb_to_mtbbus, ring_get_byte_begin(&ring_usb_to_mtbbus, 0));
@@ -541,20 +541,20 @@ static void mtbbus_message_processed(void) {
 
 /* Config --------------------------------------------------------------------*/
 
-static inline void config_save_poll(void) {
+inline void config_save_poll(void) {
 	if (_config_save) {
 		config_save();
 		_config_save = false;
 	}
 }
 
-static inline void config_load(void) {
+void config_load(void) {
 	ee_read(0, 1, &config.mtbbus_speed);
 	if ((config.mtbbus_speed >= MTBBUS_SPEEDS) || (config.mtbbus_speed == 0))
 		config.mtbbus_speed = 1;
 }
 
-static inline bool config_save(void) {
+bool config_save(void) {
 	if (!ee_format(false))
 		return false;
 	return ee_write(0, 1, &config.mtbbus_speed);
