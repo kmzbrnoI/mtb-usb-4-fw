@@ -48,15 +48,18 @@ MTB-USB module is a master module of MTBbus.
      ```
 
  * Flashing:
-   - `st-flash` (via STlink)
+   There are two independent options for firmware flashing to MTB-USB.
+
+   1. `st-flash` (via STlink)
       MTB-USB module contains programming connector. Use STlink to program the MCU.
-     ```bash
-     $ make flash_with_bootloader
-     ```
-   - Or use DFU bootloader  in MTB-USB (if bootloader already flashed).
-     ```bash
-     make flash_dfu
-     ```
+      ```bash
+      $ make flash_with_bootloader
+      ```
+   2. Via DFU bootloader in MTB-USB (if bootloader already present in MTB-USB).
+      ```bash
+      $ ./reboot_to_dfu.sh
+      $ make flash_dfu
+      ```
 
 ## References
 
